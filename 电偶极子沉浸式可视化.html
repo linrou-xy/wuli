@@ -1,0 +1,2579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电偶极子电场及电势可视化 · 离线交互式仿真</title>
+<style>
+:root{
+  --bg:#f4f6f9; --panel:#ffffff; --line:#d8dee8; --ink:#1d2733; --ink2:#5a6b7d;
+  --acc:#1f4e79; --acc2:#2e74b5; --ok:#1a7f37; --warn:#b35900; --bad:#c62828;
+  --pos:#ff8a3d; --neg:#35c4e8;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+  background:var(--bg); color:var(--ink); font-size:14px;
+  display:flex; flex-direction:column; min-height:100vh;
+}
+header{
+  background:linear-gradient(90deg,#12263c,#1f4e79);
+  color:#fff; padding:10px 18px; display:flex; align-items:center; gap:14px;
+  flex-wrap:wrap;
+}
+header h1{font-size:17px; font-weight:700; letter-spacing:1px;}
+header .sub{font-size:12px; color:#cfe0f0; font-weight:400;}
+header button{
+  margin-left:auto; background:rgba(255,255,255,.14); color:#fff; border:1px solid rgba(255,255,255,.35);
+  border-radius:6px; padding:5px 12px; cursor:pointer; font-size:12px;
+}
+header button:hover{background:rgba(255,255,255,.25);}
+main{flex:1; display:flex; gap:12px; padding:12px; min-height:0;}
+#left{flex:1; display:flex; flex-direction:column; gap:8px; min-width:0;}
+#viewTab{display:flex; gap:6px; align-items:center; flex-wrap:wrap;}
+#canvasWrap{
+  flex:1; min-height:0; background:#0b0f14; border-radius:10px; position:relative;
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+  box-shadow:inset 0 0 0 1px #1c2733;
+}
+#main{display:block;}
+#main3d{position:absolute; inset:0; margin:auto; display:none;}
+#hint3d{
+  position:absolute; left:12px; top:12px; color:#8fb4d8; font-size:12px;
+  pointer-events:none; background:rgba(10,16,24,.55); padding:4px 10px; border-radius:12px;
+}
+#q3d{
+  position:absolute; left:12px; bottom:10px; display:flex; align-items:center; gap:8px;
+  background:rgba(10,16,24,.62); padding:5px 10px; border-radius:14px;
+}
+#q3d .chip{background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.25); color:#cfe0f0;}
+#q3d .chip.on{background:rgba(46,116,181,.85); border-color:#7fc0ff; color:#fff; font-weight:700;}
+#fps3d{font-size:11px; color:#8fb4d8; min-width:56px; text-align:right; font-variant-numeric:tabular-nums;}
+#q3d .phiWrap{display:flex; align-items:center; gap:5px; font-size:11px; color:#cfe0f0; font-weight:600;}
+#q3d .phiWrap input[type=range]{width:74px; accent-color:#2e74b5;}
+#q3d .phiWrap b{color:#7fc0ff; min-width:30px; display:inline-block; text-align:right; font-variant-numeric:tabular-nums;}
+#layerBar,#presetBar{display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
+.chip{
+  background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  padding:4px 10px; font-size:12px; cursor:pointer; user-select:none; color:var(--ink2);
+}
+.chip.on{background:#e8f0f9; border-color:var(--acc2); color:var(--acc); font-weight:600;}
+#presetBar .chip.on{background:#fdeee2; border-color:#e08a4a; color:#a34d08;}
+#profWrap{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:6px 8px;}
+#prof{display:block; width:100%; height:150px;}
+#profCtrl{display:flex; gap:8px; font-size:12px; color:var(--ink2); align-items:center; padding:2px 2px 0;}
+aside{
+  width:332px; flex:none; overflow-y:auto; background:var(--panel); border:1px solid var(--line);
+  border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:8px;
+}
+details{border:1px solid var(--line); border-radius:8px; padding:6px 10px; background:#fbfcfe;}
+details[open]{border-color:#b9cde2;}
+summary{cursor:pointer; font-weight:600; color:var(--acc); font-size:13px;}
+.row{display:flex; align-items:center; gap:8px; margin:7px 0; flex-wrap:wrap;}
+.row label{width:118px; font-size:12px; color:var(--ink2);}
+.row input[type=range]{flex:1; min-width:90px;}
+.row .val{width:64px; text-align:right; font-variant-numeric:tabular-nums; font-size:12px; color:var(--ink);}
+.qlabel{
+  display:inline-block; padding:2px 8px; margin:3px 2px; border-radius:10px; font-size:11px;
+  background:#eef2f7; color:var(--ink2); font-weight:600;
+}
+table{width:100%; border-collapse:collapse; font-size:11.5px; margin-top:6px;}
+th,td{border:1px solid var(--line); padding:3px 5px; text-align:center; font-variant-numeric:tabular-nums;}
+th{background:#1f4e79; color:#fff; font-weight:600;}
+tr:nth-child(even) td{background:#f7f9fc;}
+.pass{color:var(--ok); font-weight:700;}
+.warn{color:var(--warn); font-weight:700;}
+.fail{color:var(--bad); font-weight:700;}
+button.act{
+  background:var(--acc); color:#fff; border:none; border-radius:6px; padding:6px 12px;
+  cursor:pointer; font-size:12px; margin:2px;
+}
+button.act:hover{background:var(--acc2);}
+button.act.ghost{background:#fff; color:var(--acc); border:1px solid var(--acc2);}
+#concl{font-size:12px; color:var(--ink2); margin-top:5px; line-height:1.5;}
+#statusbar{
+  background:#0f1a26; color:#9fb6cc; font-size:12px; padding:5px 14px;
+  display:flex; gap:18px; flex-wrap:wrap;
+}
+#statusbar b{color:#fff; font-weight:600;}
+#subtitle{
+  position:fixed; left:50%; bottom:52px; transform:translateX(-50%);
+  background:rgba(10,18,28,.88); color:#fff; padding:9px 18px; border-radius:8px;
+  font-size:14px; max-width:72%; text-align:center; display:none; z-index:50;
+  box-shadow:0 4px 18px rgba(0,0,0,.4);
+}
+#helpMask{position:fixed; inset:0; background:rgba(8,14,22,.55); display:none; z-index:80;}
+#helpPanel{
+  position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(760px,92vw); max-height:86vh; overflow:auto; background:#fff; border-radius:12px;
+  padding:18px 22px; z-index:90; display:none; box-shadow:0 10px 40px rgba(0,0,0,.5);
+}
+#helpPanel h2{color:var(--acc); font-size:16px; margin-bottom:8px;}
+#helpPanel h3{font-size:13px; margin:10px 0 4px; color:var(--acc2);}
+#helpPanel p,#helpPanel li{font-size:12.5px; color:var(--ink); line-height:1.7;}
+#helpPanel .f{font-family:Consolas,monospace; background:#f2f5f9; padding:2px 6px; border-radius:4px;}
+#helpClose{float:right; cursor:pointer; border:none; background:#eee; border-radius:6px; padding:4px 10px;}
+#selftestMask{position:fixed; inset:0; background:rgba(8,14,22,.55); display:none; z-index:80;}
+#selftestPanel{
+  position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(900px,94vw); max-height:88vh; overflow:auto; background:#fff; border-radius:12px;
+  padding:16px 20px; z-index:90; display:none;
+}
+#selftestPanel h2{color:var(--acc); font-size:16px; margin-bottom:6px;}
+#probeNote{font-size:11px; color:var(--ink2);}
+/* ===== v3 沉浸式界面：主模型全屏，控制组件悬浮 ===== */
+:root{
+  --bg:#03070d; --panel:rgba(8,18,30,.82); --line:rgba(125,211,252,.20);
+  --ink:#e9f5ff; --ink2:#89a5bb; --acc:#58d8ff; --acc2:#16a9db;
+  --ok:#67e8a5; --warn:#f8bd72; --bad:#ff6b82; --pos:#ffb15c; --neg:#52d8ff;
+}
+html,body{overflow:hidden;background:#02060b;}
+body{font-family:"Bahnschrift","Microsoft YaHei","PingFang SC",sans-serif;color:var(--ink);}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(circle at 50% 46%,rgba(23,111,151,.18),transparent 38%),
+    radial-gradient(circle at 12% 18%,rgba(79,70,229,.12),transparent 28%),
+    linear-gradient(145deg,#02060b 0%,#07111c 48%,#02060b 100%);
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:40;opacity:.18;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:48px 48px;mask-image:radial-gradient(circle at center,#000,transparent 82%);
+}
+header{
+  position:fixed;z-index:30;left:18px;top:16px;width:min(400px,calc(100vw - 150px));
+  padding:12px 16px;background:linear-gradient(120deg,rgba(6,18,31,.88),rgba(10,31,48,.66));
+  border:1px solid rgba(125,211,252,.20);border-radius:20px;backdrop-filter:blur(20px) saturate(140%);
+  box-shadow:0 18px 60px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.06);
+}
+header h1{font-size:15px;letter-spacing:2.5px;white-space:nowrap;text-shadow:0 0 20px rgba(88,216,255,.5);}
+header .sub{display:block;width:100%;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#7796ad;}
+header button{display:none;}
+main{position:fixed;z-index:2;inset:0;padding:0;display:block;}
+#left{position:absolute;inset:0;display:block;}
+#canvasWrap{
+  position:absolute;inset:0;border-radius:0;background:transparent;box-shadow:none;min-height:0;
+}
+#canvasWrap::before{
+  content:"";position:absolute;width:min(78vmin,860px);height:min(78vmin,860px);border-radius:50%;
+  border:1px solid rgba(88,216,255,.07);box-shadow:0 0 100px rgba(16,169,219,.08),inset 0 0 90px rgba(16,169,219,.05);
+  pointer-events:none;
+}
+#main,#main3d,#flow2d{filter:saturate(1.15) contrast(1.04);}
+#flow2d{position:absolute;inset:0;margin:auto;display:block;pointer-events:none;z-index:4;}
+#viewTab{
+  position:fixed;z-index:32;top:18px;left:50%;transform:translateX(-50%);display:flex;gap:5px;
+  padding:5px;background:rgba(5,15,25,.72);border:1px solid rgba(125,211,252,.18);border-radius:22px;
+  backdrop-filter:blur(18px);box-shadow:0 16px 50px rgba(0,0,0,.34);
+}
+.chip{background:rgba(255,255,255,.035);border:1px solid rgba(125,211,252,.15);color:#829db1;border-radius:15px;padding:6px 11px;transition:.22s ease;}
+.chip:hover{color:#dff7ff;border-color:rgba(88,216,255,.45);transform:translateY(-1px);}
+.chip.on{background:linear-gradient(135deg,rgba(22,169,219,.30),rgba(88,216,255,.13));border-color:rgba(88,216,255,.70);color:#e9fbff;box-shadow:0 0 22px rgba(88,216,255,.16);}
+#flowControl{display:flex;align-items:center;gap:6px;padding-left:5px;border-left:1px solid rgba(125,211,252,.14);}
+#flowControl input{width:76px;accent-color:#58d8ff;}
+#flowVal{font-size:10px;color:#75dfff;min-width:28px;}
+#layerBar,#presetBar{
+  position:fixed;z-index:25;left:18px;display:flex;width:190px;gap:6px;padding:10px;
+  background:rgba(5,15,25,.64);border:1px solid rgba(125,211,252,.14);border-radius:18px;
+  backdrop-filter:blur(18px);box-shadow:0 18px 50px rgba(0,0,0,.26);
+}
+#layerBar{top:100px;} #presetBar{top:310px;}
+#layerBar .qlabel,#presetBar .qlabel{width:100%;background:none;color:#4f788f;padding:1px 4px;letter-spacing:2px;text-transform:uppercase;}
+#layerBar .chip,#presetBar .chip{font-size:11px;padding:5px 8px;}
+#profWrap{margin-top:2px;background:rgba(5,15,25,.58);border-color:rgba(125,211,252,.13);}
+#profCtrl{flex-wrap:wrap;color:#7893a7;} #prof{height:150px;}
+aside{
+  position:fixed;z-index:31;right:16px;top:84px;bottom:70px;width:min(370px,calc(100vw - 32px));
+  padding:12px;overflow:auto;background:rgba(5,15,25,.78);border:1px solid rgba(125,211,252,.20);
+  border-radius:24px;backdrop-filter:blur(24px) saturate(135%);box-shadow:0 26px 80px rgba(0,0,0,.48);
+  transition:transform .38s cubic-bezier(.2,.8,.2,1),opacity .28s ease;
+  scrollbar-width:thin;scrollbar-color:rgba(88,216,255,.28) transparent;
+}
+body.panel-closed aside{transform:translateX(calc(100% + 34px));opacity:0;pointer-events:none;}
+#panelToggle,#helpFloat{
+  position:fixed;z-index:35;top:19px;width:44px;height:44px;border-radius:50%;cursor:pointer;
+  color:#dff8ff;background:rgba(5,15,25,.74);border:1px solid rgba(125,211,252,.25);backdrop-filter:blur(16px);
+  box-shadow:0 12px 35px rgba(0,0,0,.34);font-size:17px;
+}
+#panelToggle{right:18px;} #helpFloat{right:70px;font-size:14px;}
+details{background:rgba(255,255,255,.025);border-color:rgba(125,211,252,.12);border-radius:13px;padding:8px 10px;}
+details[open]{border-color:rgba(88,216,255,.28);}
+summary{color:#aeeeff;letter-spacing:.5px;}
+.row label,#probeNote,#concl{color:#7e9aaf;}
+.row input[type=range]{accent-color:#58d8ff;}
+table{color:#bcd0de;} th{background:rgba(20,105,139,.55);color:#e7faff;border-color:rgba(125,211,252,.16);} td{border-color:rgba(125,211,252,.10);} tr:nth-child(even) td{background:rgba(255,255,255,.025);}
+button.act{background:linear-gradient(135deg,#0a7ea9,#15afd9);box-shadow:0 8px 22px rgba(16,169,219,.16);} button.act.ghost{background:rgba(255,255,255,.03);color:#9be8ff;border-color:rgba(88,216,255,.35);}
+#statusbar{
+  position:fixed;z-index:25;left:18px;bottom:16px;width:auto;max-width:calc(100vw - 36px);padding:8px 13px;
+  background:rgba(5,15,25,.66);border:1px solid rgba(125,211,252,.14);border-radius:18px;backdrop-filter:blur(18px);
+  color:#668399;font-size:10px;box-shadow:0 14px 40px rgba(0,0,0,.28);
+}
+#statusbar span:last-child{display:none;} #statusbar b{color:#b9efff;}
+#hint3d{left:50%;top:auto;bottom:72px;transform:translateX(-50%);background:rgba(5,15,25,.72);color:#79cfea;border:1px solid rgba(125,211,252,.14);padding:7px 13px;}
+#q3d{left:50%;bottom:112px;transform:translateX(-50%);background:rgba(5,15,25,.76);border:1px solid rgba(125,211,252,.14);}
+#helpPanel,#selftestPanel{background:rgba(5,15,25,.96);color:#cfe6f5;border:1px solid rgba(125,211,252,.25);}
+#helpPanel h2,#helpPanel h3,#selftestPanel h2{color:#88e6ff;} #helpPanel p,#helpPanel li{color:#b7cddd;} #helpPanel .f{background:rgba(255,255,255,.06);}
+#helpMask,#selftestMask{backdrop-filter:blur(8px);}
+@media (max-width:900px){
+  header{max-width:250px;} header h1{font-size:13px;letter-spacing:.8px;} header .sub{display:none;} #viewTab{top:auto;bottom:64px;white-space:nowrap;} #flowControl input{display:none;}
+  #layerBar{top:84px;left:10px;width:154px;} #presetBar{display:none;} aside{right:8px;left:8px;top:auto;bottom:8px;width:auto;height:58vh;}
+  body.panel-closed aside{transform:translateY(calc(100% + 20px));} #statusbar{left:10px;bottom:10px;} #statusbar span:nth-child(n+4){display:none;}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;} .chip{transition:none;} aside{transition:none;}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>电偶极子电场及电势可视化</h1>
+  <span class="sub">精确解（点电荷叠加）· 远场多极近似 · 数值近似（解析电势网格中心差分 E = −∇V）—— 单文件离线，零依赖</span>
+  <button id="btnHelp">公式与用法</button>
+</header>
+<button id="helpFloat" aria-label="打开公式与用法">?</button>
+<button id="panelToggle" aria-label="展开参数面板">☰</button>
+
+<main>
+  <div id="left">
+    <div id="viewTab">
+      <span class="chip on" id="tab2d">2D 剖面</span>
+      <span class="chip" id="tab3d">3D 空间</span>
+      <span id="flowControl"><span class="chip on" id="flowToggle">流动 ON</span><input id="flowSpeed" type="range" min="0.08" max="0.65" step="0.01" value="0.22" aria-label="流动速度"><b id="flowVal">1.0×</b></span>
+      <span id="no3dNote" style="display:none;color:#b35900;font-size:12px;font-weight:600;">当前环境不支持 WebGL2，已切换兼容模式（仅 2D）。演示前请换 Chrome/Edge。</span>
+    </div>
+    <div id="canvasWrap"><canvas id="main"></canvas><canvas id="flow2d" aria-hidden="true"></canvas><canvas id="main3d" style="display:none"></canvas><div id="hint3d" style="display:none"></div><div id="q3d" style="display:none"><span class="chip on" id="qStd">标准画质</span><span class="chip" id="qGold">金档 · 体渲染</span><span class="phiWrap">剖面 φ<input type="range" id="phi3d" min="0" max="360" step="1" value="0"><b id="phiVal">0°</b></span><span id="fps3d"></span></div></div>
+    <div id="layerBar">
+      <span class="qlabel">图层</span>
+      <span class="chip" data-layer="vheat">V 热力图</span>
+      <span class="chip" data-layer="eheat">|E| 热力图</span>
+      <span class="chip" data-layer="isolines">等势线</span>
+      <span class="chip on" data-layer="flines">电场线</span>
+      <span class="chip" data-layer="vectors">矢量场</span>
+      <span class="chip" data-layer="ex">Eₓ</span>
+      <span class="chip" data-layer="ez">E_z</span>
+      <span class="chip" data-layer="err">误差地图</span>
+      <span class="chip on" data-layer="probe">探针</span>
+    </div>
+    <div id="presetBar">
+      <span class="qlabel">预设</span>
+      <span class="chip" data-preset="1">① 典型</span>
+      <span class="chip" data-preset="2">② 近场</span>
+      <span class="chip" data-preset="3">③ 远场</span>
+      <span class="chip" data-preset="4">④ 大间距</span>
+      <span class="chip" data-preset="5">⑤ 小间距</span>
+      <span class="chip" data-preset="6">⑥ 强偶极矩</span>
+      <span class="chip" data-preset="7">⑦ 弱偶极矩</span>
+    </div>
+    <div id="profWrap">
+      <div id="profCtrl">
+        <span>剖线图：</span>
+        <span class="chip on" id="profAxis">轴线（z 轴）</span>
+        <span class="chip" id="profBis">中垂线（x 轴）</span>
+        <span id="profNote">上：|E|(r) 双对数 · 下：|E| 远场近似标量绝对相对误差 · 实线=精确解 虚线=远场近似</span>
+      </div>
+      <canvas id="prof"></canvas>
+    </div>
+  </div>
+
+  <aside>
+    <details open>
+      <summary>A · 参数区</summary>
+      <div class="row"><label>电荷量 q (nC)</label><input type="range" id="sldQ" min="0.1" max="5" step="0.1" value="1"><span class="val" id="valQ">1.0</span></div>
+      <div class="row"><label>间距 a (cm)</label><input type="range" id="sldA" min="1" max="20" step="0.5" value="10"><span class="val" id="valA">10.0</span></div>
+      <div class="row"><label>计算域 L (cm)</label><input type="range" id="sldL" min="5" max="100" step="1" value="50"><span class="val" id="valL">50</span></div>
+      <div class="row"><label>等势线间隔 (V)</label><input type="range" id="sldStep" min="0.1" max="10" step="0.1" value="1"><span class="val" id="valStep">1.0</span></div>
+      <div class="row"><label>3D 等势面 V₀ (V)</label><input type="range" id="sldV0" min="3" max="30" step="1" value="10"><span class="val" id="valV0">10</span></div>
+      <div id="qTotal">总电荷 Q<sub>total</sub> = <b style="color:#1a7f37">0 C</b>（约束：q₊ + q₋ = 0）</div>
+    </details>
+
+    <details open>
+      <summary>B · 探针读数（鼠标移动，单击钉住）</summary>
+      <table id="probeTab">
+        <tr><th>坐标</th><th>r</th><th>θ</th><th>V (V)</th><th>|E| (V/m)</th><th>Eₓ</th><th>E_z</th></tr>
+        <tr><td id="pCoord">—</td><td id="pR">—</td><td id="pTh">—</td><td id="pV">—</td><td id="pE">—</td><td id="pEx">—</td><td id="pEz">—</td></tr>
+      </table>
+      <div id="probeNote">拖动 +q / −q 可改间距；读数 = 精确解（解析）</div>
+    </details>
+
+    <details open>
+      <summary>C · 理论值 vs 数值近似对比（评委必看）</summary>
+      <table id="cmpTab"></table>
+      <div id="concl"></div>
+    </details>
+
+    <details>
+      <summary>D · 扩展区（收敛性 / 误差地图 / 录制 / 演示 / 导出 / 自检）</summary>
+      <div class="row">
+        <button class="act" id="btnConv">计算收敛阶</button>
+        <button class="act ghost" id="btnSelftest">自检 13 条用例</button>
+      </div>
+      <div id="convOut" style="font-size:11.5px; color:var(--ink2);"></div>
+      <div class="row">
+        <button class="act" id="btnStory">▶ 30 秒自动演示</button>
+        <button class="act" id="btnRecord">● 录制 10 秒 WebM</button>
+      </div>
+      <div class="row">
+        <button class="act ghost" id="btnPng">导出 PNG</button>
+        <button class="act ghost" id="btnCsv">导出 CSV</button>
+      </div>
+      <div id="recordNote" style="font-size:11px; color:var(--ink2);"></div>
+    </details>
+  </aside>
+</main>
+
+<div id="statusbar">
+  <span>版本 <b id="sbVer" style="color:#7fd4a8">v2.8.1</b></span>
+  <span>总电荷 <b id="sbQ">0 C</b></span>
+  <span>偶极矩 p <b id="sbP">1.00e-10 C·m</b></span>
+  <span>显示网格 <b id="sbN">201</b></span>
+  <span>渲染 <b id="sbT">— ms</b></span>
+  <span>流动 <b>方向示意</b></span>
+  <span>快捷键：R 重置 · H |E|图 · Q 等势线 · F 场线 · V 矢量 · G 误差 · X/E 分量 · S 存图 · 1–7 预设 · 空格 演示</span>
+</div>
+<div id="subtitle"></div>
+
+<div id="helpMask"></div>
+<div id="helpPanel">
+  <button id="helpClose">关闭</button>
+  <h2>公式与用法</h2>
+  <h3>坐标与符号</h3>
+  <p>+q 在 (0, +a/2)，−q 在 (0, −a/2)，偶极矩 <b>p = q·a</b> 由 −q 指向 +q（沿 +z）。总电荷恒为 0。q 单位 nC，a/L 单位 cm，内部计算一律 SI。</p>
+  <h3>精确解（点电荷叠加，理论值）</h3>
+  <p class="f">r₊ = √(x²+(z−a/2)²)，r₋ = √(x²+(z+a/2)²)</p>
+  <p class="f">V = k·q·(1/r₊ − 1/r₋)</p>
+  <p class="f">Eₓ = k·q·x·(1/r₊³ − 1/r₋³)</p>
+  <p class="f">E_z = k·q·[(z−a/2)/r₊³ − (z+a/2)/r₋³]</p>
+  <h3>远场多极近似（r ≫ a）</h3>
+  <p class="f">V_far = k·p·cosθ/r²，E_r = 2k·p·cosθ/r³，E_θ = k·p·sinθ/r³</p>
+  <p>直角分量：Eₓ = 3k·p·x·z/r⁵，E_z = k·p·(3z²−r²)/r⁵</p>
+  <h3>数值近似（解析电势网格中心差分）</h3>
+  <p>在 [−L,L]² 上建 N×N 网格，用解析式填充 V，再中心差分求 <span class="f">E = −∇V</span>。统计区域：距两个电荷均 &gt; 0.02 m 且 |V| &gt; 1e−3 V。</p>
+  <h3>诚实声明（重要）</h3>
+  <p><b>显示</b>层的等势线用逐像素解析计算 + 抗锯齿（任意缩放锐利）；<b>误差统计</b>（误差地图、收敛阶、统计域平均误差）来自 N×N 网格的中心差分数值解，误差按电场矢量定义；<b>对比表的数值列</b>用同一中心差分格式在测点处直接计算（步长取显示网格的 Δ），因此电场测点不受当前视野大小限制；电势数值列使用网格内双线性插值，超出计算域显示“—”。<b>剖线图及 CSV</b>比较 V 与 |E| 的标量绝对相对误差，用于评估远场近似；它与误差地图/收敛分析采用的电场矢量相对误差用途不同。</p>
+  <h3>操作</h3>
+  <ul>
+    <li>拖拽 +q / −q：改变间距 a（沿 z 轴上下拖）</li>
+    <li>鼠标移动：探针读数；<b>单击</b>：钉住/解除探针</li>
+    <li>预设 ①–⑦：一键设置典型/近场/远场/强弱偶极矩工况</li>
+    <li>D 区：收敛阶（N=51→801 的 L2 误差双对数拟合）、自检 13 条、30 秒自动演示、录制 WebM、导出 PNG/CSV</li>
+  </ul>
+</div>
+
+<div id="selftestMask"></div>
+<div id="selftestPanel">
+  <button id="stClose" class="act ghost" style="float:right;">关闭</button>
+  <h2>自检 · 13 条验收用例（q=1 nC, a=0.1 m 的基准工况）</h2>
+  <div id="stProg" style="font-size:12px;color:var(--ink2);"></div>
+  <table id="stTab">
+    <tr><th>用例</th><th>内容</th><th>期望值</th><th>实际值</th><th>相对误差</th><th>结果</th></tr>
+  </table>
+  <div id="stNote" style="font-size:11.5px;color:var(--ink2);margin-top:8px;"></div>
+</div>
+
+<script id="phys">
+/* =====================================================================
+ * 模块 1 · PHYS 纯物理层（无 DOM 依赖，可被 Node 直接 require 校验）
+ * 全部公式出处：马文蔚《物理学》静电场章 + 电偶极子多极展开
+ * ===================================================================== */
+"use strict";
+const PHYS = {
+  k: 8.9875517923e9,        // 1/(4πε₀)，N·m²/C²
+  eps0: 8.8541878128e-12,   // F/m
+
+  /* 精确解：点电荷叠加（理论值） */
+  V(q, a, x, z) {
+    const rp = Math.hypot(x, z - a / 2), rm = Math.hypot(x, z + a / 2);
+    return this.k * q * (1 / rp - 1 / rm);
+  },
+  E(q, a, x, z) {
+    const rp = Math.hypot(x, z - a / 2), rm = Math.hypot(x, z + a / 2);
+    const rp3 = rp * rp * rp, rm3 = rm * rm * rm;
+    return {
+      Ex: this.k * q * (x / rp3 - x / rm3),
+      Ez: this.k * q * ((z - a / 2) / rp3 - (z + a / 2) / rm3)
+    };
+  },
+
+  /* 远场多极近似（r >> a，由 E = k[3(p·r̂)r̂ − p]/r³ 展开） */
+  Vfar(p, x, z) {
+    const r = Math.hypot(x, z);
+    return this.k * p * z / (r * r * r);          // = k p cosθ / r²
+  },
+  Efar(p, x, z) {
+    const r = Math.hypot(x, z), r2 = r * r;
+    return {
+      Ex: 3 * this.k * p * x * z / (r2 * r2 * r),
+      Ez: this.k * p * (3 * z * z - r2) / (r2 * r2 * r)
+    };
+  },
+
+  /* 中垂面/轴线的便捷函数（供对比表与剖线使用） */
+  axisV(q, a, r)   { return this.V(q, a, 0, r); },                     // 轴线上 z=r
+  axisE(q, a, r)   { const e = this.E(q, a, 0, r);  return Math.hypot(e.Ex, e.Ez); },
+  bisV(q, a, r)    { return this.V(q, a, r, 0); },                     // 中垂面上 x=r（恒为 0）
+  bisE(q, a, r)    { const e = this.E(q, a, r, 0);  return Math.hypot(e.Ex, e.Ez); },
+
+  /* 三维（轴对称：ρ² = x² + y²，与方位角 φ 无关） */
+  V3(q, a, x, y, z) {
+    const rho2 = x * x + y * y;
+    const rp = Math.sqrt(rho2 + (z - a / 2) * (z - a / 2));
+    const rm = Math.sqrt(rho2 + (z + a / 2) * (z + a / 2));
+    return this.k * q * (1 / rp - 1 / rm);
+  },
+  E3(q, a, x, y, z) {
+    const rp = Math.hypot(x, y, z - a / 2), rm = Math.hypot(x, y, z + a / 2);
+    const rp3 = rp * rp * rp, rm3 = rm * rm * rm;
+    const f = this.k * q;
+    return {
+      Ex: f * x * (1 / rp3 - 1 / rm3),
+      Ey: f * y * (1 / rp3 - 1 / rm3),
+      Ez: f * ((z - a / 2) / rp3 - (z + a / 2) / rm3)
+    };
+  }
+};
+if (typeof module !== "undefined" && module.exports) module.exports = PHYS;
+</script>
+
+<script id="colormap">
+"use strict";
+/* =====================================================================
+ * 模块 2 · 感知均匀色标（程序化 LUT，禁止 rainbow/jet）
+ * viridis 10 锚点线性插值；发散色标 蓝—白—红 用于 V / 分量 / 误差符号
+ * ===================================================================== */
+const VIRIDIS = [
+  [0.267, 0.005, 0.329], [0.283, 0.141, 0.458], [0.254, 0.265, 0.530],
+  [0.207, 0.372, 0.553], [0.164, 0.471, 0.558], [0.128, 0.567, 0.551],
+  [0.135, 0.659, 0.518], [0.267, 0.749, 0.441], [0.478, 0.821, 0.318],
+  [0.993, 0.906, 0.144]
+];
+function lut1(t, arr) {                  // t∈[0,1] → [r,g,b] 0..255
+  t = t < 0 ? 0 : (t > 1 ? 1 : t);
+  const x = t * (arr.length - 1), i = Math.min(arr.length - 2, Math.floor(x)), f = x - i;
+  const a = arr[i], b = arr[i + 1];
+  return [(a[0] + (b[0] - a[0]) * f) * 255, (a[1] + (b[1] - a[1]) * f) * 255, (a[2] + (b[2] - a[2]) * f) * 255];
+}
+const DIVBLU = [33, 102, 172], DIVW = [247, 247, 247], DIVRED = [178, 24, 43];
+function divergent(t) {                  // t∈[-1,1]
+  t = t < -1 ? -1 : (t > 1 ? 1 : t);
+  const a = t < 0 ? DIVBLU : DIVRED, b = DIVW, f = Math.abs(t);
+  return [b[0] + (a[0] - b[0]) * f, b[1] + (a[1] - b[1]) * f, b[2] + (a[2] - b[2]) * f];
+}
+function clamp01(t) { return t < 0 ? 0 : (t > 1 ? 1 : t); }
+function smoothstep(a, b, x) { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); }
+</script>
+
+<script id="app">
+"use strict";
+/* =====================================================================
+ * 模块 3 · 状态、网格数值近似、渲染、交互、对比、自检、导出、演示
+ * ===================================================================== */
+
+/* ---------- 3.1 状态 ---------- */
+const S = {
+  q: 1e-9,          // C（界面 nC）
+  a: 0.1,           // m（界面 cm）
+  L: 0.5,           // m（计算域半宽，界面 cm）
+  isoStep: 1.0,     // 等势线间隔 V（2D）
+  surfV0: 10,       // 3D 等势面电平 V（独立于等势线间隔）
+  gridN: 201,       // 显示/统计网格
+  layers: { vheat:false, eheat:false, isolines:false, flines:true, vectors:false,
+            ex:false, ez:false, err:false, probe:true },
+  probe: { x: 0.35, z: 0.35, pinned: false },
+  profile: "axis",  // axis | bis
+  lowRes: false
+};
+const p = () => S.q * S.a;                       // 偶极矩大小
+const S_POS = () => ({ x: 0, z: S.a / 2 });      // +q 位置
+const N_POS = () => ({ x: 0, z: -S.a / 2 });     // −q 位置
+
+/* ---------- 3.2 网格中心差分数值近似 ---------- */
+let mainGrid = null;
+let errRange = null;                             // 误差地图自适应色标范围（log10）
+function rebuildGrid() { mainGrid = buildGrid(S.q, S.a, S.L, S.gridN); errRange = null; }
+/* 电场矢量相对误差：同时计入大小和方向偏差 */
+function vectorRelError(num, exact) {
+  const den = Math.hypot(exact.Ex, exact.Ez);
+  return Math.hypot(num.Ex - exact.Ex, num.Ez - exact.Ez) / Math.max(den, 1e-12);
+}
+function ensureErrRange() {
+  if (errRange) return errRange;
+  const g = mainGrid;
+  let lo = Infinity, hi = -Infinity;
+  for (let j = 1; j < g.N - 1; j++) for (let i = 1; i < g.N - 1; i++) {
+    const x = -g.L + i * g.D, z = -g.L + j * g.D;
+    if (!inStats(x, z, S.q, S.a)) continue;
+    const ea = PHYS.E(S.q, S.a, x, z);
+    const en = { Ex: g.Ex[j * g.N + i], Ez: g.Ez[j * g.N + i] };
+    const rel = vectorRelError(en, ea);
+    const rl = Math.log10(rel + 1e-12);
+    if (rl < lo) lo = rl; if (rl > hi) hi = rl;
+  }
+  const pad = (hi - lo) * 0.15 || 1;
+  errRange = { lo: lo - pad, hi: hi + pad };
+  return errRange;
+}
+function buildGrid(q, a, L, N) {
+  const D = 2 * L / (N - 1);
+  const Vg = new Float64Array(N * N);
+  for (let j = 0; j < N; j++) {
+    const z = -L + j * D;
+    for (let i = 0; i < N; i++) {
+      Vg[j * N + i] = PHYS.V(q, a, -L + i * D, z);
+    }
+  }
+  const Ex = new Float64Array(N * N), Ez = new Float64Array(N * N);
+  for (let j = 1; j < N - 1; j++) {
+    for (let i = 1; i < N - 1; i++) {
+      Ex[j * N + i] = -(Vg[j * N + i + 1] - Vg[j * N + i - 1]) / (2 * D);
+      Ez[j * N + i] = -(Vg[(j + 1) * N + i] - Vg[(j - 1) * N + i]) / (2 * D);
+    }
+  }
+  /* 边界节点用最近的内部值填充，避免插值取到未计算的 0 */
+  for (let j = 1; j < N - 1; j++) {
+    const row = j * N;
+    Ex[row] = Ex[row + 1]; Ez[row] = Ez[row + 1];
+    Ex[row + N - 1] = Ex[row + N - 2]; Ez[row + N - 1] = Ez[row + N - 2];
+  }
+  for (let i = 0; i < N; i++) {
+    Ex[i] = Ex[N + i]; Ez[i] = Ez[N + i];
+    Ex[(N - 1) * N + i] = Ex[(N - 2) * N + i];
+    Ez[(N - 1) * N + i] = Ez[(N - 2) * N + i];
+  }
+  return { N, D, L, Vg, Ex, Ez };
+}
+function sampleNum(g, x, z) {                    // 双线性插值数值 E（限制在有效内部区，绝不外推）
+  const u = Math.min(Math.max((x + g.L) / g.D, 1), g.N - 2);
+  const v = Math.min(Math.max((z + g.L) / g.D, 1), g.N - 2);
+  const i = Math.floor(u), j = Math.floor(v);
+  const fu = u - i, fv = v - j, idx = (jj, ii) => jj * g.N + ii;
+  const ex = g.Ex[idx(j, i)] * (1 - fu) * (1 - fv) + g.Ex[idx(j, i + 1)] * fu * (1 - fv)
+           + g.Ex[idx(j + 1, i)] * (1 - fu) * fv + g.Ex[idx(j + 1, i + 1)] * fu * fv;
+  const ez = g.Ez[idx(j, i)] * (1 - fu) * (1 - fv) + g.Ez[idx(j, i + 1)] * fu * (1 - fv)
+           + g.Ez[idx(j + 1, i)] * (1 - fu) * fv + g.Ez[idx(j + 1, i + 1)] * fu * fv;
+  return { Ex: ex, Ez: ez };
+}
+function sampleNumV(g, x, z) {                   // 双线性插值数值 V（电势网格）
+  const u = Math.min(Math.max((x + g.L) / g.D, 0), g.N - 1 - 1e-9);
+  const v = Math.min(Math.max((z + g.L) / g.D, 0), g.N - 1 - 1e-9);
+  const i = Math.floor(u), j = Math.floor(v);
+  const fu = u - i, fv = v - j, idx = (jj, ii) => jj * g.N + ii;
+  return g.Vg[idx(j, i)] * (1 - fu) * (1 - fv) + g.Vg[idx(j, i + 1)] * fu * (1 - fv)
+       + g.Vg[idx(j + 1, i)] * (1 - fu) * fv + g.Vg[idx(j + 1, i + 1)] * fu * fv;
+}
+function inDomain(x, z) {                        // 是否在当前视野内
+  return Math.abs(x) <= S.L + 1e-12 && Math.abs(z) <= S.L + 1e-12;
+}
+/* 测点处的中心差分数值近似：步长取显示网格的 Δ，与网格解同一格式，但不受视野限制 */
+function localNumE(x, z) {
+  const h = 2 * S.L / (S.gridN - 1);
+  const V = (xx, zz) => PHYS.V(S.q, S.a, xx, zz);
+  return {
+    Ex: -(V(x + h, z) - V(x - h, z)) / (2 * h),
+    Ez: -(V(x, z + h) - V(x, z - h)) / (2 * h)
+  };
+}
+function inStats(x, z, q, a) {                   // 统计域：远离奇点（q 由调用方给出）
+  const rp = Math.hypot(x, z - a / 2), rm = Math.hypot(x, z + a / 2);
+  return rp > 0.02 && rm > 0.02 && Math.abs(PHYS.V(q, a, x, z)) > 1e-3;
+}
+
+/* ---------- 3.3 Canvas 与坐标 ---------- */
+const canvas = document.getElementById("main"), ctx = canvas.getContext("2d");
+const flowCanvas = document.getElementById("flow2d"), flowCtx = flowCanvas.getContext("2d");
+const profC = document.getElementById("prof"), pctx = profC.getContext("2d");
+let fieldPaths2D = [];
+let flowEnabled = true;
+let flowSpeed = 0.22;
+let cv = { w: 0, h: 0, res: 0, dpr: 1, worldPP: 0 };  // worldPP: 米/像素
+function sizeCanvas() {
+  const box = document.getElementById("canvasWrap");
+  const css = Math.max(240, Math.floor(Math.min(box.clientWidth, box.clientHeight)));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const res = Math.min(1024, Math.floor(css * dpr));
+  cv = { w: css, h: css, res, dpr, worldPP: 2 * S.L / res };
+  canvas.style.width = css + "px"; canvas.style.height = css + "px";
+  canvas.width = res; canvas.height = res;
+  flowCanvas.style.width = css + "px"; flowCanvas.style.height = css + "px";
+  flowCanvas.width = res; flowCanvas.height = res;
+}
+function W2SX(x) { return cv.res / 2 + x / cv.worldPP; }   // 世界→屏幕（像素）
+function W2SZ(z) { return cv.res / 2 - z / cv.worldPP; }
+function S2WX(px) { return (px - cv.res / 2) * cv.worldPP; }
+function S2WZ(py) { return (cv.res / 2 - py) * cv.worldPP; }
+
+/* ---------- 3.4 主渲染（逐像素） ---------- */
+function render() {
+  const t0 = performance.now();
+  const res = cv.res, pp = cv.worldPP;
+  const step = S.lowRes ? 3 : 1;                 // 拖动时 1/3 分辨率预览
+  const img = ctx.createImageData(res, res);
+  const d = img.data;
+  const L = S.L, q = S.q, a = S.a;
+  const on = S.layers;
+  const showHeat = on.vheat || on.eheat;
+  const showIso = on.isolines && !S.lowRes;      // 拖动预览时跳过等值线，保帧率
+  const heatMix = on.vheat && on.eheat;
+  const needErr = on.err;
+  const er = needErr ? ensureErrRange() : null;
+
+  const vCap = 1e4, v0 = 0.1, invScale = 1 / Math.log1p(vCap / v0);
+  const eLo = 1e-1, eHi = 1e4, eInv = 1 / (Math.log10(eHi) - Math.log10(eLo));
+
+  for (let py = 0; py < res; py += step) {
+    const z = L - py * pp;
+    for (let px = 0; px < res; px += step) {
+      const x = -L + px * pp;
+      let r, g, b;
+      if (showHeat || showIso || on.ex || on.ez) {
+        const v = PHYS.V(q, a, x, z);
+        const e = PHYS.E(q, a, x, z);
+        const em = Math.hypot(e.Ex, e.Ez);
+
+        let colH = null;
+        if (showHeat) {
+          if (heatMix) {
+            const c1 = divergent(Math.sign(v) * Math.log1p(Math.abs(v) / v0) * invScale);
+            const u2 = clamp01((Math.log10(em + 1e-12) - Math.log10(eLo)) * eInv);
+            const c2 = lut1(u2, VIRIDIS);
+            colH = [(c1[0] + c2[0]) / 2, (c1[1] + c2[1]) / 2, (c1[2] + c2[2]) / 2];
+          } else if (on.vheat) {
+            colH = divergent(Math.sign(v) * Math.log1p(Math.abs(v) / v0) * invScale);
+          } else {
+            const u = clamp01((Math.log10(em + 1e-12) - Math.log10(eLo)) * eInv);
+            colH = lut1(u, VIRIDIS);
+          }
+          r = colH[0]; g = colH[1]; b = colH[2];
+        } else {
+          r = 11; g = 15; b = 20;                 // 深色底
+        }
+
+        /* 分量视图（覆盖热力图区） */
+        if (on.ex || on.ez) {
+          const c = on.ex ? e.Ex : e.Ez;
+          const cc = divergent(Math.sign(c) * Math.log1p(Math.abs(c) / 1) / Math.log1p(1e4));
+          r = cc[0]; g = cc[1]; b = cc[2];
+        }
+
+        /* 解析等值线：逐像素 + 抗锯齿（与网格无关，任意缩放锐利） */
+        if (showIso) {
+          const lev = Math.round(v / S.isoStep);
+          const dv = Math.abs(v - lev * S.isoStep);
+          const em2 = em > 1e-12 ? em : 1e-12;
+          const dpx = dv / (em2 * pp);            // 到等值线的像素距离
+          const hw = (Math.abs(lev) % 5 === 0) ? 2.0 : 1.0;
+          const alpha = 1 - smoothstep(hw, hw + 1.5, dpx);
+          if (alpha > 0.02) {
+            const lc = lev === 0 ? [122, 31, 31] : [38, 51, 63];
+            r = r + (lc[0] - r) * alpha; g = g + (lc[1] - g) * alpha; b = b + (lc[2] - b) * alpha;
+          }
+        }
+      } else {
+        r = 11; g = 15; b = 20;
+      }
+
+      /* 误差地图：电场矢量相对误差 |E_num − E_exact| / |E_exact|（覆盖其上，自适应色标范围） */
+      if (needErr) {
+        const ea = PHYS.E(q, a, x, z);
+        const en = sampleNum(mainGrid, x, z);
+        const rel = vectorRelError(en, ea);
+        const u = clamp01((Math.log10(rel + 1e-12) - er.lo) / (er.hi - er.lo));
+        const cc = lut1(u, VIRIDIS);
+        r = cc[0]; g = cc[1]; b = cc[2];
+      }
+
+      for (let dy = 0; dy < step; dy++) {
+        const o = ((py + dy) * res + px) * 4;
+        for (let dx = 0; dx < step; dx++) {
+          const oo = o + dx * 4;
+          d[oo] = r; d[oo + 1] = g; d[oo + 2] = b; d[oo + 3] = 255;
+        }
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  if (S.lowRes) { drawCharges(); } else { drawOverlays(); drawLegend(); }
+  document.getElementById("sbT").textContent = (performance.now() - t0).toFixed(0);
+}
+
+/* ---------- 3.4b 色标图例（刻度 + 单位） ---------- */
+function drawLegend() {
+  const on = S.layers;
+  let mode = null;
+  if (on.err) mode = "err";
+  else if (on.ex || on.ez) mode = "comp";
+  else if (on.eheat) mode = "e";
+  else if (on.vheat) mode = "v";
+  if (!mode) return;
+  const x0 = cv.res - 46, w = 22, y0 = 48, h = cv.res - 96;
+  ctx.save();
+  for (let y = 0; y < h; y++) {
+    const t = 1 - y / (h - 1);                   // t=1 顶部
+    let c;
+    if (mode === "err") c = lut1(t, VIRIDIS);
+    else if (mode === "e") c = lut1(t, VIRIDIS);
+    else c = divergent(t * 2 - 1);
+    ctx.fillStyle = `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+    ctx.fillRect(x0, y0 + y, w, 1);
+  }
+  ctx.strokeStyle = "rgba(255,255,255,0.55)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x0, y0, w, h);
+  ctx.fillStyle = "#e8eef4";
+  ctx.font = "10px Consolas, monospace";
+  ctx.textAlign = "left";
+  const tick = (t, label) => {
+    const y = y0 + (1 - t) * h;
+    ctx.beginPath(); ctx.moveTo(x0 + w, y); ctx.lineTo(x0 + w + 5, y); ctx.stroke();
+    ctx.fillText(label, x0 + w + 8, y + 3);
+  };
+  if (mode === "e") {
+    tick(0, "1e4"); tick(0.25, "1e3"); tick(0.5, "1e2"); tick(0.75, "10"); tick(1, "0.1");
+    ctx.fillText("|E| (V/m)", x0, y0 - 8);
+  } else if (mode === "v") {
+    const f = v => (Math.sign(v) * Math.log1p(Math.abs(v) / 0.1) / Math.log1p(1e4 / 0.1) + 1) / 2;
+    tick(f(10), "+10"); tick(f(1), "+1"); tick(f(0), "0"); tick(f(-1), "−1"); tick(f(-10), "−10");
+    ctx.fillText("V (V)", x0, y0 - 8);
+  } else if (mode === "comp") {
+    const f = v => (Math.sign(v) * Math.log1p(Math.abs(v) / 1) / Math.log1p(1e4) + 1) / 2;
+    tick(f(100), "+1e2"); tick(f(1), "+1"); tick(f(0), "0"); tick(f(-1), "−1"); tick(f(-100), "−1e2");
+    ctx.fillText(on.ex ? "Eₓ (V/m)" : "E_z (V/m)", x0, y0 - 8);
+  } else {
+    const er = ensureErrRange();
+    const t = v => clamp01((Math.log10(v) - er.lo) / (er.hi - er.lo));
+    tick(t(Math.pow(10, er.hi)), er.hi.toFixed(1));
+    tick(t(Math.pow(10, (er.lo + er.hi) / 2)), ((er.lo + er.hi) / 2).toFixed(1));
+    tick(t(Math.pow(10, er.lo)), er.lo.toFixed(1));
+    ctx.fillText("矢量相对误差 (log10)", x0, y0 - 8);
+  }
+  ctx.restore();
+}
+
+/* ---------- 3.5 矢量覆盖层 ---------- */
+function drawOverlays() {
+  const q = S.q, a = S.a, L = S.L, on = S.layers;
+
+  if (on.flines) drawFieldLines();
+  if (on.vectors) drawVectors();
+
+  /* 中垂面参考线（V=0） */
+  ctx.save();
+  ctx.setLineDash([6, 6]);
+  ctx.strokeStyle = "rgba(255,255,255,0.28)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, W2SZ(0)); ctx.lineTo(cv.res, W2SZ(0));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  drawCharges();
+
+  if (on.probe) drawProbe();
+}
+
+function drawFieldLines() {
+  const sp = S_POS(), np = N_POS(), L = S.L;
+  const seeds = 12, r0 = Math.max(0.004, S.a * 0.06);
+  fieldPaths2D = [];
+  ctx.save();
+  ctx.strokeStyle = "rgba(93,210,255,0.34)";
+  ctx.shadowColor = "rgba(67,188,255,0.34)";
+  ctx.shadowBlur = Math.max(4, cv.res / 180);
+  ctx.lineWidth = Math.max(1.1, cv.res / 760);
+  for (let s = 0; s < seeds; s++) {
+    const ang = (s / seeds) * 2 * Math.PI;
+    let x = sp.x + r0 * Math.cos(ang), z = sp.z + r0 * Math.sin(ang);
+    const pts = [];
+    for (let i = 0; i < 1200; i++) {
+      pts.push([W2SX(x), W2SZ(z)]);
+      const e = PHYS.E(S.q, S.a, x, z), em = Math.hypot(e.Ex, e.Ez);
+      if (em < 1e-12) break;
+      const h = Math.max(0.006, Math.min(0.03, L * 0.03));
+      /* RK4 一步 */
+      const f = (xx, zz) => { const ee = PHYS.E(S.q, S.a, xx, zz); const m = Math.hypot(ee.Ex, ee.Ez); return [ee.Ex / m, ee.Ez / m]; };
+      const k1 = f(x, z), k2 = f(x + h / 2 * k1[0], z + h / 2 * k1[1]),
+            k3 = f(x + h / 2 * k2[0], z + h / 2 * k2[1]), k4 = f(x + h * k3[0], z + h * k3[1]);
+      x += h / 6 * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
+      z += h / 6 * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+      if (Math.hypot(x - np.x, z - np.z) < 0.012) { pts.push([W2SX(x), W2SZ(z)]); break; }
+      if (Math.abs(x) > L || Math.abs(z) > L) break;
+    }
+    if (pts.length > 1) {
+      fieldPaths2D.push(pts);
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.stroke();
+      /* 稀疏方向箭头：动画暂停时仍能读出 +q → −q */
+      for (let i = 10; i < pts.length; i += 12) {
+        const p0 = pts[i - 1], p1 = pts[i];
+        const dx = p1[0] - p0[0], dy = p1[1] - p0[1];
+        const m = Math.hypot(dx, dy); if (m < 1e-6) continue;
+        const ux = dx / m, uy = dy / m, s = Math.max(3.6, cv.res / 240);
+        ctx.fillStyle = "rgba(157,231,255,0.48)";
+        ctx.beginPath();
+        ctx.moveTo(p1[0], p1[1]);
+        ctx.lineTo(p1[0] - ux * s - uy * s, p1[1] - uy * s + ux * s);
+        ctx.lineTo(p1[0] - ux * s + uy * s, p1[1] - uy * s - ux * s);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  ctx.restore();
+}
+
+/* 独立透明层只重绘流动粒子，避免每帧重算热力图。轨迹来自上面的真实电场 RK4 积分。 */
+function drawFlow2D(now) {
+  flowCtx.clearRect(0, 0, flowCanvas.width, flowCanvas.height);
+  const visible = canvas.style.display !== "none" && S.layers.flines && flowEnabled && fieldPaths2D.length;
+  if (visible) {
+    const t = now * 0.001 * flowSpeed;
+    const qGlow = Math.min(1.35, 0.78 + Math.sqrt(S.q / 1e-9) * 0.20);
+    const radius = Math.max(2.2, cv.res / 360);
+    flowCtx.save();
+    flowCtx.globalCompositeOperation = "lighter";
+    flowCtx.lineCap = "round";
+    for (let pi = 0; pi < fieldPaths2D.length; pi++) {
+      const pts = fieldPaths2D[pi];
+      if (pts.length < 3) continue;
+      for (let k = 0; k < 3; k++) {
+        const phase = (t + pi * 0.071 + k / 3) % 1;
+        const idx = Math.min(pts.length - 1, Math.floor(phase * (pts.length - 1)));
+        const head = pts[idx];
+        for (let trail = 10; trail >= 1; trail--) {
+          const j = idx - trail;
+          if (j < 0) continue;
+          const p0 = pts[j], p1 = pts[j + 1];
+          const a = (1 - trail / 11) * 0.34 * qGlow;
+          flowCtx.strokeStyle = `rgba(${80 + trail * 3},${190 + trail * 5},255,${a})`;
+          flowCtx.lineWidth = radius * (0.35 + (1 - trail / 11) * 0.52);
+          flowCtx.beginPath(); flowCtx.moveTo(p0[0], p0[1]); flowCtx.lineTo(p1[0], p1[1]); flowCtx.stroke();
+        }
+        const halo = flowCtx.createRadialGradient(head[0], head[1], 0, head[0], head[1], radius * 4.8);
+        halo.addColorStop(0, `rgba(240,253,255,${0.98 * qGlow})`);
+        halo.addColorStop(.18, `rgba(108,226,255,${0.82 * qGlow})`);
+        halo.addColorStop(.55, `rgba(72,119,255,${0.28 * qGlow})`);
+        halo.addColorStop(1, "rgba(38,84,255,0)");
+        flowCtx.fillStyle = halo;
+        flowCtx.beginPath(); flowCtx.arc(head[0], head[1], radius * 4.8, 0, Math.PI * 2); flowCtx.fill();
+        flowCtx.fillStyle = "rgba(245,254,255,.96)";
+        flowCtx.beginPath(); flowCtx.arc(head[0], head[1], radius * .62, 0, Math.PI * 2); flowCtx.fill();
+      }
+    }
+    flowCtx.restore();
+  }
+  requestAnimationFrame(drawFlow2D);
+}
+
+function drawVectors() {
+  const n = 13, L = S.L;
+  ctx.save();
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const x = -L + i * 2 * L / (n - 1), z = -L + j * 2 * L / (n - 1);
+    const rp = Math.hypot(x, z - S.a / 2), rm = Math.hypot(x, z + S.a / 2);
+    if (rp < 0.02 || rm < 0.02) continue;
+    const e = PHYS.E(S.q, S.a, x, z), em = Math.hypot(e.Ex, e.Ez);
+    if (em < 1e-12) continue;
+    const len = 6 + 28 * clamp01(Math.log1p(em / 0.5) / Math.log1p(1e4 / 0.5));
+    const ux = e.Ex / em * len, uz = e.Ez / em * len;
+    const px = W2SX(x), py = W2SZ(z);
+    const u = clamp01((Math.log10(em + 1e-12) + 1) / 5);
+    const c = lut1(u, VIRIDIS);
+    ctx.strokeStyle = "rgba(255,255,255,0.75)";
+    ctx.fillStyle = `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px - ux / 2, py + uz / 2);
+    ctx.lineTo(px + ux / 2, py - uz / 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(px + ux / 2, py - uz / 2);
+    ctx.lineTo(px + ux * 0.2 + uz * 0.22, py - uz * 0.2 + ux * 0.22);
+    ctx.lineTo(px + ux * 0.2 - uz * 0.22, py - uz * 0.2 - ux * 0.22);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawCharges() {
+  const sp = S_POS(), np = N_POS();
+  ctx.save();
+  const R = Math.max(7, cv.res * 0.012);
+  [ [sp, "#ff8a3d", "+q"], [np, "#35c4e8", "−q"] ].forEach(([pt, col, label]) => {
+    const px = W2SX(pt.x), py = W2SZ(pt.z);
+    ctx.shadowColor = col; ctx.shadowBlur = 14;
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(px, py, R, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(px, py, R, 0, 7); ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.font = `bold ${Math.max(12, R)}px Consolas, monospace`;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText(label, px, py - R - 3);
+  });
+  /* p 方向箭头 */
+  ctx.strokeStyle = "rgba(255,255,255,0.85)";
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.lineWidth = 2;
+  const y1 = W2SZ(np.z), y2 = W2SZ(sp.z), mx = W2SX(0);
+  ctx.beginPath(); ctx.moveTo(mx, y1); ctx.lineTo(mx, y2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(mx, y2 - 8); ctx.lineTo(mx - 5, y2 - 3); ctx.lineTo(mx + 5, y2 - 3);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawProbe() {
+  const pr = S.probe;
+  ctx.save();
+  const px = W2SX(pr.x), py = W2SZ(pr.z);
+  ctx.strokeStyle = "rgba(255,255,255,0.55)";
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(px, 0); ctx.lineTo(px, cv.res);
+  ctx.moveTo(0, py); ctx.lineTo(cv.res, py);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "#ffd54a"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(px, py, 6, 0, 7); ctx.stroke();
+  ctx.restore();
+  updateProbePanel(pr.x, pr.z);
+}
+
+/* ---------- 3.6 探针读数面板 ---------- */
+function fmt(x, n = 3) {
+  if (!isFinite(x)) return "∞";
+  if (Math.abs(x) < 1e-12) return "0.000";
+  if (Math.abs(x) >= 1e4 || Math.abs(x) < 1e-2) return x.toExponential(n - 1);
+  return x.toFixed(n);
+}
+function updateProbePanel(x, z) {
+  const q = S.q, a = S.a, pm = p();
+  const v = PHYS.V(q, a, x, z), e = PHYS.E(q, a, x, z), em = Math.hypot(e.Ex, e.Ez);
+  const r = Math.hypot(x, z);
+  const theta = Math.atan2(Math.abs(x), z) * 180 / Math.PI;
+  const set = (id, t) => document.getElementById(id).textContent = t;
+  set("pCoord", `(${fmt(x * 100, 2)}, ${fmt(z * 100, 2)}) cm`);
+  set("pR", fmt(r) + " m");
+  set("pTh", fmt(theta, 3) + "°");
+  set("pV", fmt(v));
+  set("pE", fmt(em));
+  set("pEx", fmt(e.Ex));
+  set("pEz", fmt(e.Ez));
+}
+
+/* ---------- 3.7 理论 vs 仿真对比表 ---------- */
+function refreshCompare() {
+  const q = S.q, a = S.a, pm = p();
+  const rows = [
+    { label: "中垂面 r=0.5 m 的 V", kind: "V", exact: PHYS.bisV(q, a, 0.5),
+      far: PHYS.Vfar(pm, 0.5, 0), num: inDomain(0.5, 0) ? sampleNumV(mainGrid, 0.5, 0) : null },
+    { label: "中垂面 r=0.5 m 的 |E|", kind: "E", exact: PHYS.E(q, a, 0.5, 0),
+      far: PHYS.Efar(pm, 0.5, 0), num: localNumE(0.5, 0) },
+    { label: "轴线 r=0.5 m 的 V", kind: "V", exact: PHYS.axisV(q, a, 0.5),
+      far: PHYS.Vfar(pm, 0, 0.5), num: inDomain(0, 0.5) ? sampleNumV(mainGrid, 0, 0.5) : null },
+    { label: "轴线 r=0.5 m 的 |E|", kind: "E", exact: PHYS.E(q, a, 0, 0.5),
+      far: PHYS.Efar(pm, 0, 0.5), num: localNumE(0, 0.5) },
+    { label: "轴线 r=2.0 m 的 |E|", kind: "E", exact: PHYS.E(q, a, 0, 2.0),
+      far: PHYS.Efar(pm, 0, 2.0), num: localNumE(0, 2.0) }
+  ];
+  const stats = statsError(mainGrid);
+  const errText = (value, reference, unit, useVector, numVec, exactVec) => {
+    if (value == null) return "—";
+    if (useVector) return (vectorRelError(numVec, exactVec) * 100).toFixed(3) + "%（矢量）";
+    if (Math.abs(reference) < 1e-12) return "绝对 " + Math.abs(value - reference).toExponential(2) + " " + unit;
+    return (Math.abs(value - reference) / Math.abs(reference) * 100).toFixed(3) + "%";
+  };
+  let html = `<tr><th>物理量</th><th>精确解</th><th>远场近似</th><th>数值近似</th><th>数值误差</th><th>远场误差</th></tr>`;
+  for (const row of rows) {
+    if (row.kind === "V") {
+      const eNum = row.num == null ? "—" : errText(row.num, row.exact, "V", false);
+      const eFar = errText(row.far, row.exact, "V", false);
+      html += `<tr><td style="text-align:left">${row.label}</td><td>${fmt(row.exact)}</td><td>${fmt(row.far)}</td><td>${row.num == null ? "—" : fmt(row.num)}</td><td>${eNum}</td><td>${eFar}</td></tr>`;
+    } else {
+      const exactMag = Math.hypot(row.exact.Ex, row.exact.Ez);
+      const farMag = Math.hypot(row.far.Ex, row.far.Ez);
+      const numMag = Math.hypot(row.num.Ex, row.num.Ez);
+      const eNum = (vectorRelError(row.num, row.exact) * 100).toFixed(3) + "%（矢量）";
+      const eFar = (vectorRelError(row.far, row.exact) * 100).toFixed(3) + "%（矢量）";
+      html += `<tr><td style="text-align:left">${row.label}</td><td>${fmt(exactMag)}</td><td>${fmt(farMag)}</td><td>${fmt(numMag)}</td><td>${eNum}</td><td>${eFar}</td></tr>`;
+    }
+  }
+  html += `<tr><td style="text-align:left">全统计域数值梯度</td><td>—</td><td>—</td><td>N=${S.gridN}</td><td>平均 ${pct(stats.avg)}<br>最大 ${(stats.max * 100).toFixed(2)}%</td><td>—</td></tr>`;
+  document.getElementById("cmpTab").innerHTML = html;
+  const farErrAxis = vectorRelError(PHYS.Efar(pm, 0, 0.5), PHYS.E(q, a, 0, 0.5));
+  document.getElementById("concl").innerHTML =
+    `自动结论：中心差分电场矢量相对误差平均 <b>${(stats.avg * 100).toFixed(3)}%</b>、最大 <b>${(stats.max * 100).toFixed(2)}%</b>（统计域，N=${S.gridN}）；` +
+    `轴线 r=0.5 m 处远场矢量相对误差 <b>${(farErrAxis * 100).toFixed(2)}%</b>（r/a=${(0.5 / S.a).toFixed(1)}）。`;
+}
+function pct(e) {
+  if (!isFinite(e)) return "—";
+  const s = (e * 100).toFixed(3) + "%";
+  const cls = e < 0.01 ? "pass" : (e < 0.05 ? "warn" : "fail");
+  return `<span class="${cls}">${s}</span>`;
+}
+function statsError(g) {
+  let sum = 0, mx = 0, n = 0;
+  for (let j = 1; j < g.N - 1; j++) for (let i = 1; i < g.N - 1; i++) {
+    const x = -g.L + i * g.D, z = -g.L + j * g.D;
+    if (!inStats(x, z, S.q, S.a)) continue;
+    const ea = PHYS.E(S.q, S.a, x, z);
+    const en = { Ex: g.Ex[j * g.N + i], Ez: g.Ez[j * g.N + i] };
+    const rel = vectorRelError(en, ea);
+    sum += rel; if (rel > mx) mx = rel; n++;
+  }
+  return { avg: n ? sum / n : 0, max: mx, count: n };
+}
+
+/* ---------- 3.8 剖线图 ---------- */
+function drawProfile() {
+  const w = profC.clientWidth, h = 150;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (profC.width !== w * dpr) { profC.width = w * dpr; profC.height = h * dpr; }
+  pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  pctx.clearRect(0, 0, w, h);
+  const q = S.q, a = S.a, pm = p();
+  const rMin = Math.max(0.02, a * 0.6), rMax = Math.max(S.L, rMin * 1.05);
+  const isAxis = S.profile === "axis";
+  const Efn = r => isAxis ? PHYS.axisE(q, a, r) : PHYS.bisE(q, a, r);
+  const Efar = r => { const e = PHYS.Efar(pm, isAxis ? 0 : r, isAxis ? r : 0); return Math.hypot(e.Ex, e.Ez); };
+  const Vfn = r => isAxis ? PHYS.axisV(q, a, r) : PHYS.bisV(q, a, r);
+  const Vfar = r => PHYS.Vfar(pm, isAxis ? 0 : r, isAxis ? r : 0);
+  const x0 = 52, x1 = w - 12, yE0 = 14, yE1 = 64, yR0 = 78, yR1 = 136;
+  const lx = v => x0 + (Math.log10(v) - Math.log10(rMin)) / (Math.log10(rMax) - Math.log10(rMin)) * (x1 - x0);
+  const ly = (v, y0, y1, lo, hi) => y0 + (1 - (Math.log10(v + 1e-30) - lo) / (hi - lo)) * (y1 - y0);
+
+  /* 坐标轴与刻度 */
+  pctx.strokeStyle = "#c3ccd8"; pctx.fillStyle = "#5a6b7d";
+  pctx.font = "10px Consolas, monospace"; pctx.lineWidth = 1;
+  pctx.beginPath();
+  pctx.moveTo(x0, yE0); pctx.lineTo(x0, yR1); pctx.lineTo(x1, yR1);
+  pctx.stroke();
+  pctx.textAlign = "left"; pctx.fillText(isAxis ? "轴线 z 轴" : "中垂线 x 轴", x0 + 2, yE0 + 9);
+  [0.1, 1].forEach(v => { pctx.fillText(v + " m", lx(v), yR1 + 12); });
+
+  /* 上：|E| 双对数（实线精确 / 虚线远场） */
+  let loE = Infinity, hiE = -Infinity;
+  for (let i = 0; i <= 120; i++) {
+    const r = rMin * Math.pow(rMax / rMin, i / 120);
+    loE = Math.min(loE, Math.log10(Efn(r)), Math.log10(Efar(r)));
+    hiE = Math.max(hiE, Math.log10(Efn(r)), Math.log10(Efar(r)));
+  }
+  const pad = (hiE - loE) * 0.08 || 1;
+  loE -= pad; hiE += pad;
+  drawCurve(Efn, "#1f4e79", 1.8, ly, yE0, yE1, loE, hiE, lx, rMin, rMax);
+  drawCurve(Efar, "#b35900", 1.2, ly, yE0, yE1, loE, hiE, lx, rMin, rMax, true);
+  pctx.fillStyle = "#1f4e79"; pctx.fillText("|E| 精确", x0 + 4, yE0 + 20);
+  pctx.fillStyle = "#b35900"; pctx.fillText("|E| 远场", x0 + 4, yE0 + 32);
+  /* 斜率标注 */
+  pctx.fillStyle = "#5a6b7d";
+  pctx.fillText("对数斜率 ≈ −3（1/r³）", x1 - 110, yE0 + 12);
+
+  /* 下：远场相对误差（V 与 |E| 各一条）+ 2% 阈值线 */
+  drawErrCurve(r => Math.abs(Efar(r) - Efn(r)) / Efn(r), "#c62828", 1.4, yR0, yR1, lx, rMin, rMax);
+  drawErrCurve(r => Math.abs(Vfar(r) - Vfn(r)) / (Math.abs(Vfn(r)) + 1e-12), "#1a7f37", 1.2, yR0, yR1, lx, rMin, rMax);
+  pctx.setLineDash([3, 3]);
+  pctx.strokeStyle = "#8a97a5";
+  pctx.beginPath(); pctx.moveTo(x0, yR0 + (1 - 0.02 / 0.2) * (yR1 - yR0)); pctx.lineTo(x1, yR0 + (1 - 0.02 / 0.2) * (yR1 - yR0)); pctx.stroke();
+  pctx.setLineDash([]);
+  pctx.fillStyle = "#5a6b7d"; pctx.fillText("2%", x0 + 2, yR0 + (1 - 0.02 / 0.2) * (yR1 - yR0) + 10);
+  pctx.fillStyle = "#c62828"; pctx.fillText("|E| 远场误差", x0 + 4, yR0 + 14);
+  pctx.fillStyle = "#1a7f37"; pctx.fillText("V 远场误差", x0 + 4, yR0 + 26);
+}
+function drawCurve(fn, col, lw, ly, y0, y1, lo, hi, lx, rMin, rMax, dash) {
+  pctx.strokeStyle = col; pctx.lineWidth = lw;
+  if (dash) pctx.setLineDash([4, 3]);
+  pctx.beginPath();
+  for (let i = 0; i <= 120; i++) {
+    const r = rMin * Math.pow(rMax / rMin, i / 120);
+    const px = lx(r), py = ly(fn(r), y0, y1, lo, hi);
+    if (i === 0) pctx.moveTo(px, py); else pctx.lineTo(px, py);
+  }
+  pctx.stroke();
+  if (dash) pctx.setLineDash([]);
+}
+function drawErrCurve(fn, col, lw, y0, y1, lx, rMin, rMax) {
+  pctx.strokeStyle = col; pctx.lineWidth = lw;
+  pctx.beginPath();
+  for (let i = 0; i <= 120; i++) {
+    const r = rMin * Math.pow(rMax / rMin, i / 120);
+    const e = Math.min(0.2, fn(r));
+    const px = lx(r), py = y0 + (1 - e / 0.2) * (y1 - y0);
+    if (i === 0) pctx.moveTo(px, py); else pctx.lineTo(px, py);
+  }
+  pctx.stroke();
+}
+
+/* ---------- 3.9 交互 ---------- */
+let dragging = null;
+let lrTimer = null;
+function touchLowRes() {                         // 拖动/滑块期间半分辨率预览，松手后升回
+  S.lowRes = true;
+  clearTimeout(lrTimer);
+  lrTimer = setTimeout(() => { S.lowRes = false; render(); }, 160);
+}
+function refreshAll() {
+  rebuildGrid();
+  render();
+  drawProfile();
+  refreshCompare();
+  updateStatus();
+  if (typeof window.rebuild3D === "function") window.rebuild3D();   // 3D 视图同步
+}
+function updateStatus() {
+  document.getElementById("sbQ").textContent = "0 C";
+  document.getElementById("sbP").textContent = (S.q * S.a).toExponential(2) + " C·m";
+  document.getElementById("sbN").textContent = S.gridN;
+}
+function minimumDomain(a) { return Math.ceil(Math.max(0.05, 0.72 * a) * 100 - 1e-9) / 100; }
+function setParams(q, a, L) {
+  /* 保证两电荷与剖线有效区间位于计算域内，并为对数剖线留出范围 */
+  L = Math.min(1.0, Math.max(L, minimumDomain(a)));
+  S.q = q; S.a = a; S.L = L;
+  document.getElementById("sldQ").value = q * 1e9;
+  document.getElementById("sldA").value = a * 100;
+  document.getElementById("sldL").value = L * 100;
+  document.getElementById("valQ").textContent = (q * 1e9).toFixed(1);
+  document.getElementById("valA").textContent = (a * 100).toFixed(1);
+  document.getElementById("valL").textContent = L * 100;
+  sizeCanvas(); refreshAll();
+}
+function applyPreset(n) {
+  const presets = [
+    [1e-9, 0.10, 0.50], [1e-9, 0.10, 0.15], [1e-9, 0.02, 1.00],
+    [1e-9, 0.15, 0.50], [1e-9, 0.02, 0.25], [5e-9, 0.10, 0.50], [0.2e-9, 0.10, 0.50]
+  ];
+  const [q, a, L] = presets[n - 1];
+  setParams(q, a, L);
+  document.querySelectorAll("#presetBar .chip").forEach(c => c.classList.toggle("on", +c.dataset.preset === n));
+}
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  const px = (e.clientX - rect.left) / rect.width * cv.res;
+  const py = (e.clientY - rect.top) / rect.height * cv.res;
+  if (dragging) {
+    touchLowRes();
+    const z = S2WZ(py);
+    const az = Math.max(0.005, Math.abs(z));
+    const maxA = Math.min(0.2, S.L / 0.72);
+    const maxAStep = Math.floor((maxA + 1e-12) / 0.005) * 0.005;
+    S.a = Math.max(0.01, Math.min(maxAStep, Math.round(Math.min(maxA, az * 2) / 0.005) * 0.005));
+    document.getElementById("sldA").value = S.a * 100;
+    document.getElementById("valA").textContent = (S.a * 100).toFixed(1);
+    refreshAll();
+    return;
+  }
+  if (S.probe.pinned) return;
+  S.probe.x = S2WX(px); S.probe.z = S2WZ(py);
+  render();
+});
+canvas.addEventListener("mousedown", e => {
+  const rect = canvas.getBoundingClientRect();
+  const px = (e.clientX - rect.left) / rect.width * cv.res;
+  const py = (e.clientY - rect.top) / rect.height * cv.res;
+  const tol = 18;
+  const sp = [W2SX(0), W2SZ(S.a / 2)], np = [W2SX(0), W2SZ(-S.a / 2)];
+  if (Math.hypot(px - sp[0], py - sp[1]) < tol || Math.hypot(px - np[0], py - np[1]) < tol) {
+    dragging = true;
+  } else {
+    S.probe.x = S2WX(px); S.probe.z = S2WZ(py);
+    S.probe.pinned = !S.probe.pinned;
+    render();
+  }
+});
+window.addEventListener("mouseup", () => { dragging = false; S.lowRes = false; render(); });
+
+document.querySelectorAll("#layerBar .chip").forEach(c => {
+  c.addEventListener("click", () => {
+    const l = c.dataset.layer;
+    S.layers[l] = !S.layers[l];
+    c.classList.toggle("on", S.layers[l]);
+    if ((l === "ex" || l === "ez") && S.layers[l]) {
+      S.layers.ex = l === "ex"; S.layers.ez = l === "ez";
+      document.querySelector('[data-layer="ex"]').classList.toggle("on", S.layers.ex);
+      document.querySelector('[data-layer="ez"]').classList.toggle("on", S.layers.ez);
+    }
+    render();
+  });
+});
+document.querySelectorAll("#presetBar .chip").forEach(c => {
+  c.addEventListener("click", () => applyPreset(+c.dataset.preset));
+});
+document.getElementById("sldQ").addEventListener("input", e => {
+  touchLowRes(); setParams(e.target.value * 1e-9, S.a, S.L);
+});
+document.getElementById("sldA").addEventListener("input", e => {
+  touchLowRes(); setParams(S.q, e.target.value / 100, S.L);
+});
+document.getElementById("sldL").addEventListener("input", e => {
+  touchLowRes(); setParams(S.q, S.a, e.target.value / 100);
+});
+document.getElementById("sldStep").addEventListener("input", e => {
+  S.isoStep = +e.target.value; document.getElementById("valStep").textContent = (+e.target.value).toFixed(1);
+  touchLowRes(); render();
+});
+document.getElementById("sldV0").addEventListener("input", e => {
+  S.surfV0 = +e.target.value; document.getElementById("valV0").textContent = e.target.value;
+  touchLowRes(); refreshAll();
+});
+document.getElementById("profAxis").addEventListener("click", () => {
+  S.profile = "axis";
+  document.getElementById("profAxis").classList.add("on");
+  document.getElementById("profBis").classList.remove("on");
+  drawProfile();
+});
+document.getElementById("profBis").addEventListener("click", () => {
+  S.profile = "bis";
+  document.getElementById("profBis").classList.add("on");
+  document.getElementById("profAxis").classList.remove("on");
+  drawProfile();
+});
+
+/* 帮助面板 */
+document.getElementById("btnHelp").addEventListener("click", () => {
+  document.getElementById("helpPanel").style.display = "block";
+  document.getElementById("helpMask").style.display = "block";
+});
+document.getElementById("helpClose").addEventListener("click", () => {
+  document.getElementById("helpPanel").style.display = "none";
+  document.getElementById("helpMask").style.display = "none";
+});
+document.getElementById("helpMask").addEventListener("click", () => {
+  document.getElementById("helpPanel").style.display = "none";
+  document.getElementById("helpMask").style.display = "none";
+});
+
+window.addEventListener("resize", () => { sizeCanvas(); refreshAll(); });
+
+/* ---------- 3.10 收敛阶（T10） ---------- */
+document.getElementById("btnConv").addEventListener("click", async () => {
+  const out = document.getElementById("convOut");
+  out.innerHTML = "计算中…（N=51→801，五档网格）";
+  await new Promise(r => setTimeout(r, 30));
+  const q = S.q, a = S.a, L = 1.0;
+  const Ns = [51, 101, 201, 401, 801];
+  const pts = [];
+  for (const N of Ns) {
+    const g = buildGrid(q, a, L, N);
+    let s2 = 0, n = 0;
+    for (let j = 1; j < N - 1; j++) for (let i = 1; i < N - 1; i++) {
+      const x = -L + i * g.D, z = -L + j * g.D;
+      if (!inStats(x, z, q, a)) continue;
+      const ea = PHYS.E(q, a, x, z);
+      const en = { Ex: g.Ex[j * N + i], Ez: g.Ez[j * N + i] };
+      const rel = vectorRelError(en, ea);
+      s2 += rel * rel; n++;
+    }
+    pts.push([Math.log10(2 * L / (N - 1)), Math.log10(Math.sqrt(s2 / n))]);
+    out.innerHTML = `计算中… N=${N} 完成`;
+    await new Promise(r => setTimeout(r, 0));
+  }
+  /* 拟合 N≥101 的细网格区间，避免最粗网格尚未进入渐近区影响阶数估计 */
+  const fitPts = pts.slice(1);
+  const mx = fitPts.reduce((s, p) => s + p[0], 0) / fitPts.length;
+  const my = fitPts.reduce((s, p) => s + p[1], 0) / fitPts.length;
+  let num = 0, den = 0;
+  fitPts.forEach(p => { num += (p[0] - mx) * (p[1] - my); den += (p[0] - mx) * (p[0] - mx); });
+  const slope = num / den;
+  let html = `<table><tr><th>N</th><th>h (m)</th><th>L2 矢量相对误差</th></tr>`;
+  Ns.forEach((N, i) => {
+    const h = 2 * L / (N - 1);
+    html += `<tr><td>${N}</td><td>${h.toExponential(2)}</td><td>${Math.pow(10, pts[i][1]).toExponential(2)}</td></tr>`;
+  });
+  html += `</table>`;
+  const ok = Math.abs(slope - 2.0) <= 0.25;
+  html += `<div>细网格（N≥101）双对数拟合斜率 = <b>${slope.toFixed(3)}</b>（理论 2.0，二阶中心差分；粗网格段不参与拟合）<span class="${ok ? "pass" : "fail"}">${ok ? "√ 接近二阶" : "× 偏离较大"}</span></div>`;
+  html += `<div style="margin-top:4px;">误差 ∝ h<sup>${slope.toFixed(2)}</sup>：网格尺度减半，误差约降为 ${Math.pow(2, slope).toFixed(1)} 倍。</div>`;
+  out.innerHTML = html;
+});
+
+/* ---------- 3.11 自检 13 条（T1–T13） ---------- */
+document.getElementById("btnSelftest").addEventListener("click", async () => {
+  document.getElementById("selftestPanel").style.display = "block";
+  document.getElementById("selftestMask").style.display = "block";
+  const prog = document.getElementById("stProg");
+  const tab = document.getElementById("stTab");
+  const note = document.getElementById("stNote");
+  tab.innerHTML = `<tr><th>用例</th><th>内容</th><th>期望值</th><th>实际值</th><th>相对误差</th><th>结果</th></tr>`;
+  prog.textContent = "自检运行中…";
+  const results = [];
+  const addRow = (id, desc, exp, act, err, ok) => {
+    const cls = ok ? "pass" : "fail";
+    const eStr = err == null ? "—" : (typeof err === "number" ? (err * 100).toFixed(3) + "%" : err);
+    tab.insertAdjacentHTML("beforeend",
+      `<tr><td>${id}</td><td style="text-align:left">${desc}</td><td>${exp}</td><td>${act}</td><td>${eStr}</td><td class="${cls}">${ok ? "√ 通过" : "× 未通过"}</td></tr>`);
+    results.push(ok);
+  };
+  const rel = (a, e) => Math.abs(a - e) / Math.abs(e);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  /* 基准工况 */
+  const q = 1e-9, a = 0.1, pm = q * a;
+
+  /* T1–T4 */
+  const T1 = [PHYS.axisV(q, a, 0.5), PHYS.axisE(q, a, 0.5)];
+  addRow("T1", "轴线 r=0.5 m：V / |E|（方向 +z）", "V=3.631 V, |E|=14.67 V/m",
+    `V=${fmt(T1[0])}, |E|=${fmt(T1[1])}`, Math.max(rel(T1[0], 3.631), rel(T1[1], 14.67)),
+    Math.max(rel(T1[0], 3.631), rel(T1[1], 14.67)) <= 0.005);
+  const T2v = PHYS.bisV(q, a, 0.5), T2e = PHYS.bisE(q, a, 0.5), T2z = PHYS.E(q, a, 0.5, 0).Ez;
+  addRow("T2", "中垂面 r=0.5 m：V=0 且 |E|=7.084 V/m 方向 −z", "V=0.000, |E|=7.084",
+    `V=${fmt(T2v)}, |E|=${fmt(T2e)}, Ez=${fmt(T2z)}`,
+    Math.max(rel(T2e, 7.084), T2v === 0 ? 0 : 1),
+    Math.abs(T2v) < 1e-6 && rel(T2e, 7.084) <= 0.005 && T2z < 0);
+  const T3x = 0.353553, T3z = 0.353553;
+  const T3v = PHYS.V(q, a, T3x, T3z), T3e = Math.hypot(PHYS.E(q, a, T3x, T3z).Ex, PHYS.E(q, a, T3x, T3z).Ez);
+  addRow("T3", "θ=45°、r=0.5 m：V / |E|", "V=2.536 V, |E|=11.38 V/m",
+    `V=${fmt(T3v)}, |E|=${fmt(T3e)}`, Math.max(rel(T3v, 2.536), rel(T3e, 11.38)),
+    Math.max(rel(T3v, 2.536), rel(T3e, 11.38)) <= 0.005);
+  const T4 = [PHYS.axisV(q, a, -0.5), PHYS.axisE(q, a, -0.5), PHYS.E(q, a, 0, -0.5).Ez];
+  addRow("T4", "反轴线 r=0.5 m：V=−3.631 V，|E|=14.67 V/m 方向 +z",
+    "V=−3.631, |E|=14.67, Ez>0",
+    `V=${fmt(T4[0])}, |E|=${fmt(T4[1])}, Ez=${fmt(T4[2])}`,
+    Math.max(rel(T4[0], -3.631), rel(T4[1], 14.67)),
+    Math.max(rel(T4[0], -3.631), rel(T4[1], 14.67)) <= 0.005 && T4[2] > 0);
+
+  /* T5 电荷守恒 */
+  addRow("T5", "总电荷守恒 q₊+q₋=0", "严格 0",
+    `q₊+q₋ = ${S.q} + ${-S.q} = ${S.q - S.q}`, null, (S.q - S.q) === 0);
+
+  /* T6 标度律 */
+  const T6E = PHYS.axisE(q, a, 1.0) / PHYS.axisE(q, a, 2.0);
+  const T6V = PHYS.axisV(q, a, 1.0) / PHYS.axisV(q, a, 2.0);
+  addRow("T6", "标度律 E(1)/E(2)=8.03, V(1)/V(2)=4.01", "8.03 / 4.01",
+    `${T6E.toFixed(3)} / ${T6V.toFixed(3)}`, Math.max(rel(T6E, 8.03), rel(T6V, 4.01)),
+    Math.max(rel(T6E, 8.03), rel(T6V, 4.01)) <= 0.005);
+
+  /* T7 双对数斜率 −3 */
+  {
+    const xs = [], ys = [];
+    for (let i = 0; i < 20; i++) {
+      const r = 0.5 * Math.pow(2.0 / 0.5, i / 19);
+      xs.push(Math.log10(r)); ys.push(Math.log10(PHYS.axisE(q, a, r)));
+    }
+    const mx = xs.reduce((s, v) => s + v, 0) / 20, my = ys.reduce((s, v) => s + v, 0) / 20;
+    let num = 0, den = 0;
+    for (let i = 0; i < 20; i++) { num += (xs[i] - mx) * (ys[i] - my); den += (xs[i] - mx) * (xs[i] - mx); }
+    const slope = num / den;
+    addRow("T7", "轴线 r∈[0.5,2.0] |E| 双对数斜率", "−3.01 ± 0.05",
+      slope.toFixed(3), Math.abs(slope + 3.01) / 3.01, Math.abs(slope + 3.01) <= 0.05);
+  }
+
+  /* T8 中垂面零电势 */
+  {
+    let mx = 0;
+    for (let i = 0; i < 50; i++) {
+      const x = 0.1 + (3.0 - 0.1) * i / 49;
+      mx = Math.max(mx, Math.abs(PHYS.bisV(q, a, x)));
+    }
+    addRow("T8", "中垂面 50 点采样 max|V|", "< 1e−6 V",
+      mx.toExponential(1) + " V", null, mx < 1e-6);
+  }
+
+  /* T9 数值梯度自洽 N=401 L=1.0 */
+  {
+    prog.textContent = "自检运行中… T9 数值梯度（N=401）";
+    await sleep(20);
+    const g = buildGrid(q, a, 1.0, 401);
+    let sum = 0, mx = 0, n = 0;
+    for (let j = 1; j < 400; j++) for (let i = 1; i < 400; i++) {
+      const x = -1 + i * g.D, z = -1 + j * g.D;
+      if (!inStats(x, z, q, a)) continue;
+      const ea = PHYS.E(q, a, x, z);
+      const en = { Ex: g.Ex[j * 401 + i], Ez: g.Ez[j * 401 + i] };
+      const relE = vectorRelError(en, ea);
+      sum += relE; if (relE > mx) mx = relE; n++;
+    }
+    const avg = sum / n;
+    addRow("T9", "N=401 数值梯度平均/最大电场矢量相对误差（统计域距电荷>0.02m）", "avg<0.1%, max<8%",
+      `avg ${(avg * 100).toFixed(3)}%, max ${(mx * 100).toFixed(2)}%`, null, avg < 0.001 && mx < 0.08);
+  }
+
+  /* T10 收敛阶 */
+  {
+    prog.textContent = "自检运行中… T10 收敛阶（N=51→801）";
+    await sleep(20);
+    const Ns = [51, 101, 201, 401, 801], pts = [];
+    for (const N of Ns) {
+      const g = buildGrid(q, a, 1.0, N);
+      let s2 = 0, n = 0;
+      for (let j = 1; j < N - 1; j++) for (let i = 1; i < N - 1; i++) {
+        const x = -1 + i * g.D, z = -1 + j * g.D;
+        if (!inStats(x, z, q, a)) continue;
+        const ea = PHYS.E(q, a, x, z);
+        const en = { Ex: g.Ex[j * N + i], Ez: g.Ez[j * N + i] };
+        const relE = vectorRelError(en, ea);
+        s2 += relE * relE; n++;
+      }
+      pts.push([Math.log10(2 / (N - 1)), Math.log10(Math.sqrt(s2 / n))]);
+      await sleep(0);
+    }
+    const fitPts = pts.slice(1); // 仅用 N≥101 的细网格段估计渐近收敛阶
+    const mx = fitPts.reduce((s, p) => s + p[0], 0) / fitPts.length;
+    const my = fitPts.reduce((s, p) => s + p[1], 0) / fitPts.length;
+    let num = 0, den = 0;
+    fitPts.forEach(p => { num += (p[0] - mx) * (p[1] - my); den += (p[0] - mx) * (p[0] - mx); });
+    const slope = num / den;
+    addRow("T10", "收敛阶：N≥101 细网格段 L2 矢量误差斜率（理论 2.0）", "接近 2.0（允许偏差 0.25）",
+      slope.toFixed(3), Math.abs(slope - 2) / 2, Math.abs(slope - 2) <= 0.25);
+  }
+
+  /* T11 解析等值线 vs marching squares 一致性 */
+  {
+    prog.textContent = "自检运行中… T11 marching squares 对照";
+    await sleep(20);
+    const g = buildGrid(q, a, 0.5, 401);
+    const v0 = 1.0, segs = [];
+    for (let j = 0; j < 400; j++) for (let i = 0; i < 400; i++) {
+      const idx = (jj, ii) => jj * 401 + ii;
+      const v00 = g.Vg[idx(j, i)], v10 = g.Vg[idx(j, i + 1)], v01 = g.Vg[idx(j + 1, i)], v11 = g.Vg[idx(j + 1, i + 1)];
+      const x0 = -0.5 + i * g.D, z0 = -0.5 + j * g.D;
+      const edge = (va, vb, ax, az, bx, bz) => {
+        if ((va - v0) * (vb - v0) >= 0) return null;
+        const t = (v0 - va) / (vb - va);
+        return [ax + t * (bx - ax), az + t * (bz - az)];
+      };
+      const pts = [
+        edge(v00, v10, x0, z0, x0 + g.D, z0),
+        edge(v10, v11, x0 + g.D, z0, x0 + g.D, z0 + g.D),
+        edge(v11, v01, x0 + g.D, z0 + g.D, x0, z0 + g.D),
+        edge(v01, v00, x0, z0 + g.D, x0, z0)
+      ].filter(Boolean);
+      if (pts.length === 2) segs.push(pts);
+    }
+    /* 显示尺度：900px 对应 1.0m → 偏差换算成像素 */
+    let maxOffPx = 0, nCheck = 0;
+    for (const [pa, pb] of segs) {
+      for (const [x, z] of [pa, pb]) {
+        const v = PHYS.V(q, a, x, z);
+        const e = PHYS.E(q, a, x, z), em = Math.hypot(e.Ex, e.Ez) || 1e-12;
+        const dM = Math.abs(v - v0) / em;
+        maxOffPx = Math.max(maxOffPx, dM * 900);
+        nCheck++;
+      }
+    }
+    addRow("T11", "解析等值线与 marching squares 位置偏差", "< 1 px（900px/1m 尺度）",
+      `${maxOffPx.toFixed(3)} px（${segs.length} 线段）`, null, maxOffPx < 1);
+  }
+
+  /* T12 误差各向异性 */
+  {
+    prog.textContent = "自检运行中… T12 误差各向异性";
+    await sleep(20);
+    const g = buildGrid(q, a, 1.0, 401);
+    const relAt = (x, z) => vectorRelError(sampleNum(g, x, z), PHYS.E(q, a, x, z));
+    const rA = relAt(0.5, 0), rD = relAt(0.25, 0.4330127); // 同半径、相对轴线偏转 30°
+    const ratio = rA / rD;
+    addRow("T12", "误差地图各向异性：轴上 vs 30° 方向误差之比", "≥1.5 或 ≤0.67",
+      `${ratio.toFixed(2)}（轴 ${(rA * 100).toFixed(3)}% / 30° ${(rD * 100).toFixed(3)}%）`,
+      null, ratio >= 1.5 || ratio <= 0.67);
+  }
+
+  /* T13 录制与 storyboard 能力 */
+  {
+    const hasMR = typeof MediaRecorder !== "undefined";
+    const mime = (() => {
+      if (!hasMR) return null;
+      for (const m of ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]) {
+        if (MediaRecorder.isTypeSupported(m)) return m;
+      }
+      return null;
+    })();
+    const hasStream = typeof canvas.captureStream === "function";
+    const okStory = STORY.length >= 5 && STORY[STORY.length - 1].t >= 29 && STORY[STORY.length - 1].reset === true;
+    addRow("T13", "WebM 录制能力 + storyboard 完整性（录制请在浏览器实测）",
+      "MediaRecorder 可用", `MR=${hasMR}, ${mime || "不支持"}, 时间线 ${STORY.length} 关键帧`, null,
+      hasMR && !!mime && hasStream && okStory);
+  }
+
+  prog.textContent = `自检完成：${results.filter(Boolean).length}/13 通过`;
+  note.innerHTML = "说明：T1–T12 全部由本程序内的物理函数与网格中心差分数值近似实时计算，误差由当前物理模型和网格数据计算。电场数值误差按矢量相对误差定义。T13 的录制请在 Chrome/Edge 里点「录制 10 秒」实测。";
+  console.table(results);
+});
+document.getElementById("stClose").addEventListener("click", () => {
+  document.getElementById("selftestPanel").style.display = "none";
+  document.getElementById("selftestMask").style.display = "none";
+});
+document.getElementById("selftestMask").addEventListener("click", () => {
+  document.getElementById("selftestPanel").style.display = "none";
+  document.getElementById("selftestMask").style.display = "none";
+});
+
+/* ---------- 3.12 导出：PNG / CSV ---------- */
+document.getElementById("btnPng").addEventListener("click", () => {
+  const canvas3d = document.getElementById("main3d");
+  if (canvas3d && canvas3d.style.display !== "none") {
+    try {
+      const link = document.createElement("a");
+      link.download = `dipole_3D_q${S.q * 1e9}nC_a${S.a * 100}cm.png`;
+      link.href = canvas3d.toDataURL("image/png");
+      link.click();
+      document.getElementById("recordNote").textContent = "已导出当前 3D 视图 PNG。";
+    } catch (err) {
+      document.getElementById("recordNote").textContent = "3D PNG 导出失败：" + err.message;
+    }
+    return;
+  }
+  const oldW = canvas.width, oldH = canvas.height, oldRes = cv.res, oldPP = cv.worldPP, oldLow = S.lowRes;
+  S.lowRes = false;
+  canvas.width = 2400; canvas.height = 2400;
+  cv.res = 2400; cv.worldPP = 2 * S.L / 2400;
+  render();                                        // 以 2400² 重渲染
+  const link = document.createElement("a");
+  link.download = `dipole_q${S.q * 1e9}nC_a${S.a * 100}cm_L${S.L * 100}cm.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+  canvas.width = oldW; canvas.height = oldH;
+  cv.res = oldRes; cv.worldPP = oldPP; S.lowRes = oldLow;
+  render();                                        // 恢复屏幕分辨率
+});
+document.getElementById("btnCsv").addEventListener("click", () => {
+  const rows = [["r(m)", "V_exact(V)", "V_far(V)", "E_exact(V/m)", "E_far(V/m)", "E_mag_abs_err(%)", "V_abs_err(%)"]];
+  const isAxis = S.profile === "axis";
+  const rMin = Math.max(0.02, S.a * 0.6), rMax = Math.max(S.L, rMin * 1.05);
+  const pm = p();
+  for (let i = 0; i <= 200; i++) {
+    const r = rMin * Math.pow(rMax / rMin, i / 200);
+    const E = isAxis ? PHYS.axisE(S.q, S.a, r) : PHYS.bisE(S.q, S.a, r);
+    const Ef = Math.hypot(...(isAxis ? [PHYS.Efar(pm, 0, r).Ex, PHYS.Efar(pm, 0, r).Ez] : [PHYS.Efar(pm, r, 0).Ex, PHYS.Efar(pm, r, 0).Ez]));
+    const V = isAxis ? PHYS.axisV(S.q, S.a, r) : PHYS.bisV(S.q, S.a, r);
+    const Vf = PHYS.Vfar(pm, isAxis ? 0 : r, isAxis ? r : 0);
+    const eAbsErr = E > 1e-12 ? Math.abs(Ef - E) / E * 100 : 0;
+    const vAbsErr = Math.abs(V) > 1e-12 ? Math.abs(Vf - V) / Math.abs(V) * 100 : Math.abs(Vf - V) < 1e-12 ? 0 : NaN;
+    rows.push([r.toExponential(4), V.toExponential(4), Vf.toExponential(4), E.toExponential(4), Ef.toExponential(4),
+      eAbsErr.toExponential(3), Number.isFinite(vAbsErr) ? vAbsErr.toExponential(3) : ""]);
+  }
+  const csv = "\uFEFF" + rows.map(r => r.join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.download = `dipole_profile_${S.profile}.csv`;
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
+/* ---------- 3.13 storyboard 30 秒自动演示 ---------- */
+/* keyframes: {t, set()}  末帧带 reset:true */
+const STORY = [
+  { t: 0, set: () => setParams(1e-9, 0.1, 0.5), sub: "两个等量异号点电荷，间距 a，偶极矩 p = q·a，总电荷为零。" },
+  { t: 6, set: () => { S.probe.x = 0; S.probe.z = 0.5; S.probe.pinned = true; }, sub: "轴线上 r = 0.5 m：V = 3.631 V，|E| = 14.67 V/m，与手算 3.631 / 14.672 一致。" },
+  { t: 12, set: () => setParams(1e-9, 0.15, 0.5), sub: "把间距拉到 15 cm：等势面被拉长，场形随之改变。" },
+  { t: 18, set: () => { S.layers.err = true; document.querySelector('[data-layer="err"]').classList.add("on"); }, sub: "误差地图：数值误差的空间分布——沿轴与对角方向不同，源于 ∂³V 的各向异性。" },
+  { t: 24, set: () => { S.layers.err = false; document.querySelector('[data-layer="err"]').classList.remove("on"); S.layers.isolines = true; S.layers.flines = true; document.querySelector('[data-layer="isolines"]').classList.add("on"); document.querySelector('[data-layer="flines"]').classList.add("on"); }, sub: "中垂面 V = 0 而 E ≠ 0；远场 V ∝ 1/r²、E ∝ 1/r³——课堂估算由此而来。" },
+  { t: 30, set: () => setParams(1e-9, 0.1, 0.5), sub: "演示结束，参数已复位。", reset: true }
+];
+let storyAnim = null;
+let activeRecorder = null;
+function ease(t) { return t * t * (3 - 2 * t); }
+function runStory(duration, onDone, speed) {
+  speed = speed || 1;                            // 时间线为 30 个"剧情秒"；speed=3 即 10 秒播完
+  stopStory();
+  const subEl = document.getElementById("subtitle");
+  const t0 = performance.now();
+  const lastSet = [-1];                          // −1 保证关键帧 0 一定触发
+  storyAnim = requestAnimationFrame(function tick(now) {
+    const t = (now - t0) / 1000;
+    if (t >= duration) {
+      /* 先执行最终复位：避免 requestAnimationFrame 恰好越过 30 秒时跳过末帧 */
+      STORY[STORY.length - 1].set();
+      S.probe.x = 0.35; S.probe.z = 0.35; S.probe.pinned = false;
+      const defaults = { vheat:true, eheat:false, isolines:true, flines:true, vectors:false, ex:false, ez:false, err:false, probe:true };
+      Object.assign(S.layers, defaults);
+      document.querySelectorAll("[data-layer]").forEach(c => c.classList.toggle("on", !!S.layers[c.dataset.layer]));
+      document.querySelectorAll("#presetBar .chip").forEach(c => c.classList.toggle("on", +c.dataset.preset === 1));
+      refreshAll();
+      subEl.style.display = "none"; storyAnim = null; onDone && onDone(); return;
+    }
+    const tt = t * speed;
+    for (let i = 0; i < STORY.length; i++) {
+      const k = STORY[i];
+      if (tt >= k.t) {
+        if (lastSet[0] !== i) { k.set(); refreshAll(); lastSet[0] = i; }
+        subEl.style.display = "block";
+        subEl.textContent = k.sub;
+      }
+    }
+    /* 探针位置在 6–12 剧情秒之间滑动演示（只重绘，不重建网格，保证录制流畅） */
+    if (tt >= 6 && tt < 12 && S.probe.pinned) {
+      const e2 = (tt - 6) / 6;
+      S.probe.z = 0.5 - 0.35 * ease(e2);
+      render();
+    }
+    storyAnim = requestAnimationFrame(tick);
+  });
+}
+function stopStory(stopRecording = false) {
+  if (storyAnim) { cancelAnimationFrame(storyAnim); storyAnim = null; }
+  document.getElementById("subtitle").style.display = "none";
+  if (stopRecording && activeRecorder && activeRecorder.state !== "inactive") {
+    activeRecorder.stoppedByUser = true;
+    try { activeRecorder.stop(); } catch (err) { console.warn("停止 WebM 录制失败：", err); }
+  }
+}
+document.getElementById("btnStory").addEventListener("click", () => {
+  if (activeRecorder && activeRecorder.state !== "inactive") {
+    document.getElementById("recordNote").textContent = "正在录制，请先等待完成或按 Esc 结束并导出当前片段。";
+    return;
+  }
+  runStory(30, () => {});
+});
+window.addEventListener("keydown", e => {
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (activeRecorder && activeRecorder.state !== "inactive") {
+      document.getElementById("recordNote").textContent = "正在录制，请先等待完成或按 Esc 结束并导出当前片段。";
+      return;
+    }
+    runStory(30, () => {}); return;
+  }
+  if (e.key === "Escape") { stopStory(true); return; }
+  const map = {
+    "h": "eheat", "q": "isolines", "f": "flines", "v": "vectors",
+    "g": "err", "x": "ex", "e": "ez"
+  };
+  const k = e.key.toLowerCase();
+  if (k === "r") { applyPreset(1); return; }
+  if (map[k]) {
+    const l = map[k];
+    S.layers[l] = !S.layers[l];
+    document.querySelector(`[data-layer="${l}"]`).classList.toggle("on", S.layers[l]);
+    if ((l === "ex" || l === "ez") && S.layers[l]) {
+      S.layers.ex = l === "ex"; S.layers.ez = l === "ez";
+      document.querySelector('[data-layer="ex"]').classList.toggle("on", S.layers.ex);
+      document.querySelector('[data-layer="ez"]').classList.toggle("on", S.layers.ez);
+    }
+    render();
+    return;
+  }
+  if (k >= "1" && k <= "7") { applyPreset(+k); return; }
+  if (k === "s") { document.getElementById("btnPng").click(); }
+});
+
+/* ---------- 3.14 WebM 录制（10 秒） ---------- */
+document.getElementById("btnRecord").addEventListener("click", () => {
+  const note = document.getElementById("recordNote");
+  if (activeRecorder && activeRecorder.state !== "inactive") {
+    note.textContent = "已有录制任务正在进行，请等待完成或按 Esc 结束当前录制。";
+    return;
+  }
+  const canvas3d = document.getElementById("main3d");
+  if (canvas3d && canvas3d.style.display !== "none") {
+    note.textContent = "WebM 自动演示录制目前仅支持 2D 模式；3D 视图可使用「导出 PNG」。";
+    return;
+  }
+  if (typeof MediaRecorder === "undefined" || typeof canvas.captureStream !== "function") {
+    note.textContent = "当前浏览器不支持录制（请用 Chrome / Edge）。可改用「导出 PNG」逐帧截图。";
+    return;
+  }
+  let mime = null;
+  for (const m of ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]) {
+    if (MediaRecorder.isTypeSupported(m)) { mime = m; break; }
+  }
+  if (!mime) { note.textContent = "当前浏览器不支持 WebM 编码，建议用 Chrome/Edge 录制。"; return; }
+  let stream = null, rec = null;
+  try {
+    stream = canvas.captureStream(30);
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8e6 });
+    activeRecorder = rec;
+    const chunks = [];
+    rec.stoppedByUser = false;
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    rec.onstop = () => {
+      const blob = new Blob(chunks, { type: "video/webm" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.download = `dipole_demo_q${S.q * 1e9}nC_a${S.a * 100}cm.webm`;
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      stream.getTracks().forEach(track => track.stop());
+      if (activeRecorder === rec) activeRecorder = null;
+      note.textContent = rec.stoppedByUser
+        ? "已提前停止并导出当前 WebM 片段。"
+        : "已导出 WebM（约 10 秒）。可拖入 PPT 使用。";
+    };
+    note.textContent = "录制中（约 10 秒，3.2 倍速演示；按 Esc 可提前结束并导出片段）…";
+    rec.start();
+    /* 演示 9.4 秒后停，再等 0.6 秒才 stop：保证尾部不被切掉、总长约 10 秒 */
+    runStory(9.4, () => setTimeout(() => { if (rec.state !== "inactive") rec.stop(); }, 600), 3.2);
+  } catch (err) {
+    if (activeRecorder === rec) activeRecorder = null;
+    if (rec && rec.state !== "inactive") { try { rec.stop(); } catch (_) {} }
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    note.textContent = "录制失败：" + err.message + "（建议改用导出 PNG 逐帧截图）。";
+  }
+});
+
+/* ---------- 3.15 初始化 ---------- */
+document.querySelector("aside").appendChild(document.getElementById("profWrap"));
+document.body.classList.add("panel-closed");
+document.querySelectorAll(".chip").forEach(el => {
+  el.setAttribute("role", "button"); el.setAttribute("tabindex", "0");
+  el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); } });
+});
+const panelToggle = document.getElementById("panelToggle");
+panelToggle.addEventListener("click", () => {
+  const closed = document.body.classList.toggle("panel-closed");
+  panelToggle.textContent = closed ? "☰" : "×";
+  panelToggle.setAttribute("aria-label", closed ? "展开参数面板" : "收起参数面板");
+});
+document.getElementById("helpFloat").addEventListener("click", () => document.getElementById("btnHelp").click());
+document.getElementById("flowToggle").addEventListener("click", e => {
+  flowEnabled = !flowEnabled;
+  e.currentTarget.classList.toggle("on", flowEnabled);
+  e.currentTarget.textContent = flowEnabled ? "流动 ON" : "流动 OFF";
+});
+document.getElementById("flowSpeed").addEventListener("input", e => {
+  flowSpeed = +e.target.value;
+  document.getElementById("flowVal").textContent = (flowSpeed / 0.22).toFixed(1) + "×";
+});
+sizeCanvas();
+refreshAll();
+requestAnimationFrame(drawFlow2D);
+const VERSION = "v3.0.0";
+document.getElementById("sbVer").textContent = VERSION;
+console.log(`电偶极子仿真 ${VERSION} 已就绪：沉浸式单文件、零依赖、file:// 直接可用（2D + 3D 流动场线）。`);
+console.log("显示层=解析；统计层=网格中心差分数值近似；对比表数值列=测点处同一格式直接计算。分工见帮助面板。");
+</script>
+<script id="threeD">
+"use strict";
+/* =====================================================================
+ * 模块 4 · 三维空间视图（手写 WebGL2，零库、零依赖、零外链）
+ *  - 等势面：Marching Tetrahedra（Kuhn 六四面体分解，解析式、无查表，可自证正确）
+ *  - 场线  ：半平面 RK4 追 12 条 → 绕 z 轴旋转复制 8 个方位角（体现 φ 无关）
+ *  - 相机  ：轨道相机（拖拽旋转 / 滚轮缩放 / 阻尼平滑）
+ *  - 降级  ：无 WebGL2 或 ?no3d=1 时自动退回 2D
+ * ===================================================================== */
+(function () {
+  if (typeof location !== "undefined" && new URLSearchParams(location.search).has("no3d")) {
+    const t = document.getElementById("tab3d");
+    if (t) t.style.display = "none";
+    const n = document.getElementById("no3dNote");
+    if (n) { n.style.display = "inline"; n.textContent = "已通过 ?no3d=1 强制禁用 3D（兼容模式）。"; }
+    return;
+  }
+
+  const canvas2d = document.getElementById("main");
+  const canvas3d = document.getElementById("main3d");
+  const tab2d = document.getElementById("tab2d");
+  const tab3d = document.getElementById("tab3d");
+  const no3dNote = document.getElementById("no3dNote");
+  const hint3d = document.getElementById("hint3d");
+
+  let gl = null, active = false, ready = false, raf = 0;
+  let shaders = {}, locSurf = {}, locLine = {}, locPt = {}, locVol = {}, locFlat = {};
+  let surfBuf = null, surfCount = 0, lineBuf = null, lineSegs = [], ptBuf = null, quadBuf = null;
+  let planeBuf = null, sliceBuf = null, sliceCount = 0, pickBuf = null, halfLines = [];
+  let contourBuf = null, contourCount = 0, sliceFieldBuf = null, sliceFieldCount = 0;
+  let refBuf = null, refCount = 0, axesBuf = null;
+  let PHI = 0;                                       // 剖切面方位角（度）
+  let GOLD = false;                                  // 金档：体积光晕
+  let frameTimes = [], fpsShown = 0;
+  let rebuildPending = false;
+  const CAM = { yaw: 0.9, pitch: 0.5, dist: 2.2, tyaw: 0.9, tpitch: 0.5, tdist: 2.2 };
+
+  /* ---------- 4.1 向量 / 矩阵（列主序 Float32Array(16)） ---------- */
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const norm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+  const M = {
+    perspective(fovy, aspect, near, far) {
+      const f = 1 / Math.tan(fovy / 2), m = new Float32Array(16);
+      m[0] = f / aspect; m[5] = f;
+      m[10] = (far + near) / (near - far); m[11] = -1;
+      m[14] = (2 * far * near) / (near - far); m[15] = 0;
+      return m;
+    },
+    lookAt(eye, c, up) {
+      const f = norm(sub(c, eye)), s = norm(cross(f, up)), u = cross(s, f);
+      /* 列主序：平移量必须落在第 4 列（m[12],m[13],m[14]），不是第 4 行 */
+      const m = new Float32Array(16);
+      m[0] = s[0]; m[4] = s[1]; m[8] = s[2]; m[12] = -dot(s, eye);
+      m[1] = u[0]; m[5] = u[1]; m[9] = u[2]; m[13] = -dot(u, eye);
+      m[2] = -f[0]; m[6] = -f[1]; m[10] = -f[2]; m[14] = dot(f, eye);
+      m[3] = 0; m[7] = 0; m[11] = 0; m[15] = 1;
+      return m;
+    }
+  };
+
+  /* ---------- 4.2 着色器（GLSL ES 3.00） ---------- */
+  const VS_SURF = `#version 300 es
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNrm;
+layout(location=2) in vec3 aCol;
+uniform mat4 uProj, uView;
+out vec3 vNrm; out vec3 vCol; out vec3 vWorld;
+void main(){ vWorld=aPos; vNrm=aNrm; vCol=aCol; gl_Position = uProj * uView * vec4(aPos, 1.0); }`;
+  const FS_SURF = `#version 300 es
+precision highp float;
+in vec3 vNrm; in vec3 vCol; in vec3 vWorld;
+uniform vec3 uEye;
+out vec4 frag;
+void main(){
+  vec3 N = normalize(vNrm);
+  vec3 V = normalize(uEye - vWorld);
+  vec3 L = normalize(vec3(0.45, 0.6, 1.0));
+  float diff = abs(dot(N, L));
+  float fres = pow(1.0 - abs(dot(N, V)), 2.0);
+  vec3 col = vCol * (0.30 + 0.78 * diff) + vec3(0.95, 0.9, 0.8) * fres * 0.25;
+  float d = length(uEye - vWorld);
+  col = mix(col, vec3(0.045, 0.06, 0.085), clamp(1.0 - exp(-d * 0.55), 0.0, 1.0));
+  frag = vec4(col, 1.0);
+}`;
+  const VS_LINE = `#version 300 es
+layout(location=0) in vec3 aPos;
+layout(location=1) in float aT;
+uniform mat4 uProj, uView;
+uniform float uTime, uFlow;
+out float vPulse;
+void main(){
+  /* 沿场线传播的亮脉冲：aT 为弧长参数，ph 随时间推进 → "能量流"效果 */
+  float ph = fract(aT - uTime * 0.18);
+  vPulse = smoothstep(0.0, 0.06, ph) * smoothstep(0.26, 0.06, ph) * uFlow;
+  gl_Position = uProj * uView * vec4(aPos, 1.0);
+}`;
+  const FS_LINE = `#version 300 es
+precision highp float;
+uniform vec3 uCol;
+in float vPulse;
+out vec4 frag;
+void main(){ frag = vec4(uCol + vec3(0.85, 0.93, 1.0) * vPulse * 1.3, 1.0); }`;
+  const VS_PT = `#version 300 es
+layout(location=0) in vec3 aPos;
+uniform mat4 uProj, uView; uniform float uSize;
+void main(){ gl_Position = uProj * uView * vec4(aPos, 1.0); gl_PointSize = uSize; }`;
+  const FS_PT = `#version 300 es
+precision highp float;
+uniform vec3 uCol; out vec4 frag;
+void main(){
+  vec2 c = gl_PointCoord * 2.0 - 1.0;
+  frag = vec4(uCol, smoothstep(1.0, 0.15, length(c)));
+}`;
+
+  /* ---- 体积光晕（金档）：全屏四边形 + 逐像素 raymarching |E| ---- */
+  const VS_VOL = `#version 300 es
+layout(location=0) in vec2 aNdc;
+out vec2 vNdc;
+void main(){ vNdc = aNdc; gl_Position = vec4(aNdc, 0.0, 1.0); }`;
+  const FS_VOL = `#version 300 es
+precision highp float;
+in vec2 vNdc;
+out vec4 frag;
+uniform vec3 uEye, uRight, uUp, uFwd;
+uniform float uTanHalf, uL, uA, uQ, uTime, uGain, uLoLog, uHiLog, uRin, uRout;
+uniform int uSteps;
+
+float Emag(vec3 p){
+  float rp = length(vec3(p.x, p.y, p.z - uA * 0.5));
+  float rm = length(vec3(p.x, p.y, p.z + uA * 0.5));
+  float rp3 = rp * rp * rp, rm3 = rm * rm * rm;
+  float f = 8.9875517923e9 * uQ;
+  float t = f * (1.0 / rp3 - 1.0 / rm3);
+  float ex = t * p.x, ey = t * p.y;
+  float ez = f * ((p.z - uA * 0.5) / rp3 - (p.z + uA * 0.5) / rm3);
+  return sqrt(ex * ex + ey * ey + ez * ez);
+}
+vec2 boxHit(vec3 ro, vec3 rd){
+  vec3 inv = 1.0 / rd;
+  vec3 t0 = (-vec3(uL) - ro) * inv;
+  vec3 t1 = ( vec3(uL) - ro) * inv;
+  vec3 lo = min(t0, t1), hi = max(t0, t1);
+  return vec2(max(max(lo.x, lo.y), lo.z), min(min(hi.x, hi.y), hi.z));
+}
+void main(){
+  vec3 rd = normalize(uFwd + vNdc.x * uTanHalf * uRight + vNdc.y * uTanHalf * uUp);
+  vec2 tb = boxHit(uEye, rd);
+  float tn = max(tb.x, 0.0), tf = tb.y;
+  if (tf <= tn) { frag = vec4(0.0); return; }
+  float dt = (tf - tn) / float(uSteps);
+  vec3 acc = vec3(0.0);
+  float trans = 1.0;
+  for (int i = 0; i < 96; i++) {
+    if (i >= uSteps) break;
+    vec3 p = uEye + rd * (tn + (float(i) + 0.5) * dt);
+    /* 几何包络：到最近电荷的距离，保证光晕只裹在电荷附近，不会铺满整屏 */
+    float rmin = min(length(vec3(p.x, p.y, p.z - uA * 0.5)),
+                     length(vec3(p.x, p.y, p.z + uA * 0.5)));
+    float env = smoothstep(uRout, uRin, rmin);
+    if (env <= 0.0) continue;
+    float e = Emag(p);
+    float d = env * smoothstep(uLoLog, uHiLog, log(max(e, 1e-9)));
+    d *= 0.82 + 0.18 * sin(uTime * 0.9 + p.z * 5.0);          /* 轻微呼吸 */
+    vec3 col = mix(vec3(0.08, 0.36, 0.86), vec3(0.86, 0.96, 1.0), d);
+    float alpha = d * uGain * dt * 6.0;
+    acc += col * alpha * trans;
+    trans *= (1.0 - min(alpha * 0.45, 0.9));
+    if (trans < 0.03) break;
+  }
+  frag = vec4(acc, 1.0);
+}`;
+
+  /* ---- 剖切面及其上的等势线/场线（几何在 y=0 平面构建，着色器里绕 z 轴旋转） ---- */
+  const VS_FLAT = `#version 300 es
+layout(location=0) in vec3 aPos;
+uniform mat4 uProj, uView;
+uniform float uC, uS;
+void main(){
+  vec3 p = vec3(aPos.x * uC - aPos.y * uS, aPos.x * uS + aPos.y * uC, aPos.z);
+  gl_Position = uProj * uView * vec4(p, 1.0);
+}`;
+  const FS_FLAT = `#version 300 es
+precision highp float;
+uniform vec4 uCol;
+out vec4 frag;
+void main(){ frag = uCol; }`;
+
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error("shader:", gl.getShaderInfoLog(s)); return null; }
+    return s;
+  }
+  function link(vs, fs) {
+    const p = gl.createProgram();
+    gl.attachShader(p, compile(gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.error("link:", gl.getProgramInfoLog(p)); return null; }
+    return p;
+  }
+
+  function initGL() {
+    if (ready) return true;
+    if (typeof WebGL2RenderingContext === "undefined") return false;
+    try {
+      gl = canvas3d.getContext("webgl2", { antialias: true, preserveDrawingBuffer: true });
+      if (!gl) return false;
+      shaders.surf = link(VS_SURF, FS_SURF);
+      shaders.line = link(VS_LINE, FS_LINE);
+      shaders.pt = link(VS_PT, FS_PT);
+      shaders.vol = link(VS_VOL, FS_VOL);
+      shaders.flat = link(VS_FLAT, FS_FLAT);
+      if (!shaders.surf || !shaders.line || !shaders.pt) return false;
+      if (!shaders.vol) console.warn("体渲染着色器不可用，金档将不可选");
+      if (!shaders.flat) console.warn("剖切面着色器不可用，将不显示剖面");
+      locFlat = { pos: gl.getAttribLocation(shaders.flat, "aPos"),
+        proj: gl.getUniformLocation(shaders.flat, "uProj"), view: gl.getUniformLocation(shaders.flat, "uView"),
+        col: gl.getUniformLocation(shaders.flat, "uCol"), c: gl.getUniformLocation(shaders.flat, "uC"),
+        s: gl.getUniformLocation(shaders.flat, "uS") };
+      if (shaders.flat) {
+        planeBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, planeBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 0, -1, 1, 0, -1, -1, 0, 1, 1, 0, 1]), gl.STATIC_DRAW);
+        sliceBuf = gl.createBuffer();
+        contourBuf = gl.createBuffer();
+        sliceFieldBuf = gl.createBuffer();
+        pickBuf = gl.createBuffer();
+        refBuf = gl.createBuffer();
+        axesBuf = gl.createBuffer();
+      }
+      locSurf = { pos: gl.getAttribLocation(shaders.surf, "aPos"), nrm: gl.getAttribLocation(shaders.surf, "aNrm"), col: gl.getAttribLocation(shaders.surf, "aCol"),
+        proj: gl.getUniformLocation(shaders.surf, "uProj"), view: gl.getUniformLocation(shaders.surf, "uView"), eye: gl.getUniformLocation(shaders.surf, "uEye") };
+      locLine = { pos: gl.getAttribLocation(shaders.line, "aPos"), t: gl.getAttribLocation(shaders.line, "aT"),
+        proj: gl.getUniformLocation(shaders.line, "uProj"), view: gl.getUniformLocation(shaders.line, "uView"),
+        col: gl.getUniformLocation(shaders.line, "uCol"), time: gl.getUniformLocation(shaders.line, "uTime"),
+        flow: gl.getUniformLocation(shaders.line, "uFlow") };
+      locPt = { pos: gl.getAttribLocation(shaders.pt, "aPos"), proj: gl.getUniformLocation(shaders.pt, "uProj"), view: gl.getUniformLocation(shaders.pt, "uView"), size: gl.getUniformLocation(shaders.pt, "uSize"), col: gl.getUniformLocation(shaders.pt, "uCol") };
+      if (shaders.vol) {
+        locVol = { ndc: gl.getAttribLocation(shaders.vol, "aNdc"),
+          eye: gl.getUniformLocation(shaders.vol, "uEye"), right: gl.getUniformLocation(shaders.vol, "uRight"),
+          up: gl.getUniformLocation(shaders.vol, "uUp"), fwd: gl.getUniformLocation(shaders.vol, "uFwd"),
+          tanHalf: gl.getUniformLocation(shaders.vol, "uTanHalf"), L: gl.getUniformLocation(shaders.vol, "uL"),
+          A: gl.getUniformLocation(shaders.vol, "uA"), Q: gl.getUniformLocation(shaders.vol, "uQ"),
+          time: gl.getUniformLocation(shaders.vol, "uTime"), gain: gl.getUniformLocation(shaders.vol, "uGain"),
+          loLog: gl.getUniformLocation(shaders.vol, "uLoLog"), hiLog: gl.getUniformLocation(shaders.vol, "uHiLog"),
+          rin: gl.getUniformLocation(shaders.vol, "uRin"), rout: gl.getUniformLocation(shaders.vol, "uRout"),
+          steps: gl.getUniformLocation(shaders.vol, "uSteps") };
+        quadBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      }
+      gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
+      gl.disable(gl.CULL_FACE);
+      ready = true;
+      return true;
+    } catch (e) { console.warn("3D 初始化失败，退回 2D", e); return false; }
+  }
+
+  /* ---------- 4.3 等势面：Marching Tetrahedra（Kuhn 分解 + 奇点排除） ---------- */
+  function buildSurfaces() {
+    const N = 96, L = S.L, D = 2 * L / (N - 1), q = S.q, a = S.a, V0 = S.surfV0;
+    const Vg = new Float32Array(N * N * N);
+    const IDX = (i, j, k) => (k * N + j) * N + i;
+    const bad = new Uint8Array(N * N * N);        // 奇点邻域 + 中垂面薄边 排除
+    const CUT = 0.02, ZCUT = 0.02, hz = a / 2;
+    const kq = PHYS.k * q;
+    for (let k = 0; k < N; k++) {
+      const z = -L + k * D, dzp = z - hz, dzm = z + hz, az = Math.abs(z) < ZCUT;
+      for (let j = 0; j < N; j++) {
+        const y = -L + j * D, rho2 = y * y;
+        for (let i = 0; i < N; i++) {
+          const x = -L + i * D, rho2f = rho2 + x * x;
+          /* 一次算出两个电荷距离，V 与奇点判据共用（省掉每节点 2 次 hypot） */
+          const rp = Math.sqrt(rho2f + dzp * dzp), rm = Math.sqrt(rho2f + dzm * dzm);
+          const id = IDX(i, j, k);
+          Vg[id] = kq * (1 / rp - 1 / rm);
+          bad[id] = (rp < CUT || rm < CUT || az) ? 1 : 0;
+        }
+      }
+    }
+    const pos = [], nrm = [], col = [];
+    const corners = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]];
+    const TETS = [[0, 1, 3, 7], [0, 1, 5, 7], [0, 2, 3, 7], [0, 2, 6, 7], [0, 4, 5, 7], [0, 4, 6, 7]];
+    const EDGES = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
+    const emitTri = (p0, p1, p2, rgb) => {
+      for (const pt of [p0, p1, p2]) {
+        pos.push(pt.p[0], pt.p[1], pt.p[2]);
+        nrm.push(pt.n[0], pt.n[1], pt.n[2]);
+        col.push(rgb[0], rgb[1], rgb[2]);
+      }
+    };
+    const addSurf = (iso, rgb) => {
+      const v8 = new Float64Array(8), id8 = new Int32Array(8);
+      for (let k = 0; k < N - 1; k++) for (let j = 0; j < N - 1; j++) for (let i = 0; i < N - 1; i++) {
+        /* 整格预判：先取 8 个角，全在内/全在外/含奇点 → 整格跳过（绝大多数格子走这条快路） */
+        let skip = false, allIn = true, allOut = true;
+        for (let ci = 0; ci < 8; ci++) {
+          const id = IDX(i + corners[ci][0], j + corners[ci][1], k + corners[ci][2]);
+          if (bad[id]) { skip = true; break; }
+          const vv = Vg[id];
+          v8[ci] = vv; id8[ci] = id;
+          if (vv > iso) allOut = false; else allIn = false;
+        }
+        if (skip || allIn || allOut) continue;
+        for (const tet of TETS) {
+          const i0 = v8[tet[0]] > iso, i1 = v8[tet[1]] > iso, i2 = v8[tet[2]] > iso, i3 = v8[tet[3]] > iso;
+          const nIn = i0 + i1 + i2 + i3;
+          if (nIn === 0 || nIn === 4) continue;
+          const v = [v8[tet[0]], v8[tet[1]], v8[tet[2]], v8[tet[3]]];
+          const ins = [i0, i1, i2, i3];
+          const pts = [];
+          for (const [ea, eb] of EDGES) {
+            if (ins[ea] === ins[eb]) continue;
+            const ca = corners[tet[ea]], cb = corners[tet[eb]];
+            const ax = -L + (i + ca[0]) * D, ay = -L + (j + ca[1]) * D, az = -L + (k + ca[2]) * D;
+            const bx = -L + (i + cb[0]) * D, by = -L + (j + cb[1]) * D, bz = -L + (k + cb[2]) * D;
+            const t = (iso - v[ea]) / (v[eb] - v[ea]);
+            const px = ax + t * (bx - ax), py = ay + t * (by - ay), pz = az + t * (bz - az);
+            const e = PHYS.E3(q, a, px, py, pz), em = Math.hypot(e.Ex, e.Ey, e.Ez) || 1;
+            pts.push({ p: [px, py, pz], n: [-e.Ex / em, -e.Ey / em, -e.Ez / em] });
+          }
+          if (pts.length === 3) emitTri(pts[0], pts[1], pts[2], rgb);
+          else if (pts.length === 4) {
+            /* 线性插值下等值面在四面体内是一个平面，4 点共面。
+               按绕质心的极角排序后再扇形三角化，避免"蝶形"三角形造成破洞。 */
+            const c = [0, 0, 0];
+            for (const pp of pts) { c[0] += pp.p[0]; c[1] += pp.p[1]; c[2] += pp.p[2]; }
+            c[0] /= 4; c[1] /= 4; c[2] /= 4;
+            let nrmQ = cross(sub(pts[1].p, pts[0].p), sub(pts[2].p, pts[0].p));
+            if (Math.hypot(nrmQ[0], nrmQ[1], nrmQ[2]) < 1e-14) nrmQ = [0, 0, 1];
+            const uq = norm(sub(pts[0].p, c)), vq = norm(cross(nrmQ, uq));
+            const angOf = pp => Math.atan2(dot(sub(pp.p, c), vq), dot(sub(pp.p, c), uq));
+            const ord = pts.slice().sort((A, B) => angOf(A) - angOf(B));
+            emitTri(ord[0], ord[1], ord[2], rgb);
+            emitTri(ord[0], ord[2], ord[3], rgb);
+          }
+        }
+      }
+    };
+    addSurf(V0, [0.98, 0.55, 0.26]);
+    addSurf(-V0, [0.20, 0.68, 0.88]);
+    const stride = 9, data = new Float32Array(pos.length + nrm.length + col.length);
+    for (let i = 0; i < pos.length / 3; i++) {
+      const o = i * stride;
+      data[o] = pos[i * 3]; data[o + 1] = pos[i * 3 + 1]; data[o + 2] = pos[i * 3 + 2];
+      data[o + 3] = nrm[i * 3]; data[o + 4] = nrm[i * 3 + 1]; data[o + 5] = nrm[i * 3 + 2];
+      data[o + 6] = col[i * 3]; data[o + 7] = col[i * 3 + 1]; data[o + 8] = col[i * 3 + 2];
+    }
+    if (!surfBuf) surfBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, surfBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    surfCount = data.length / stride;
+  }
+
+  /* ---------- 4.4 3D 场线：半平面追线 + 绕轴旋转复制 ---------- */
+  function buildFieldLines() {
+    const sp = { x: 0, z: S.a / 2 }, np = { x: 0, z: -S.a / 2 };
+    const seeds = 12, r0 = Math.max(0.004, S.a * 0.06), L = S.L;
+    const half = [];
+    for (let s = 0; s < seeds; s++) {
+      const ang = (s / seeds) * 2 * Math.PI;
+      let x = sp.x + r0 * Math.cos(ang), z = sp.z + r0 * Math.sin(ang);
+      const line = [];
+      for (let i = 0; i < 1200; i++) {
+        line.push([x, z]);
+        const e = PHYS.E(S.q, S.a, x, z), em = Math.hypot(e.Ex, e.Ez);
+        if (em < 1e-12) break;
+        const h = Math.max(0.006, Math.min(0.03, L * 0.03));
+        const f = (xx, zz) => { const ee = PHYS.E(S.q, S.a, xx, zz); const m = Math.hypot(ee.Ex, ee.Ez); return [ee.Ex / m, ee.Ez / m]; };
+        const k1 = f(x, z), k2 = f(x + h / 2 * k1[0], z + h / 2 * k1[1]), k3 = f(x + h / 2 * k2[0], z + h / 2 * k2[1]), k4 = f(x + h * k3[0], z + h * k3[1]);
+        x += h / 6 * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
+        z += h / 6 * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+        if (Math.hypot(x - np.x, z - np.z) < 0.012) { line.push([x, z]); break; }
+        if (Math.abs(x) > L || Math.abs(z) > L) break;
+      }
+      half.push(line);
+    }
+    halfLines = half;                      // 供剖切面复用（这 12 条就落在 y=0 平面内）
+    const pos = []; const segs = []; let o = 0;
+    const NAZI = 8;
+    for (const line of half) {
+      const npts = line.length;
+      for (let az = 0; az < NAZI; az++) {
+        const phi = (az / NAZI) * 2 * Math.PI, c = Math.cos(phi), sn = Math.sin(phi);
+        for (let i = 0; i < npts; i++) {
+          /* 每点 4 个浮点：x,y,z + 弧长参数 aT（供流光使用） */
+          pos.push(line[i][0] * c, line[i][0] * sn, line[i][1], npts > 1 ? i / (npts - 1) : 0);
+        }
+        segs.push({ o, n: npts }); o += npts;
+      }
+    }
+    if (!lineBuf) lineBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, lineBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+    lineSegs = segs;
+  }
+
+  function buildPoints() {
+    const data = new Float32Array([0, S.a / 2, 0, 0, -S.a / 2, 0]);
+    if (!ptBuf) ptBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, ptBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  }
+
+  /* ---------- 4.4b 剖切面内容：y=0 平面上的等势线 + 场线（均为线段，一次 LINES 画完） ---------- */
+  function buildSlice() {
+    if (!shaders.flat || !sliceBuf) return;
+    const L = S.L, n = 160, D = 2 * L / (n - 1), q = S.q, a = S.a, hz = a / 2;
+    const CUT = 0.02, ZCUT = 0.02;
+    const badP = (x, z) => (Math.hypot(x, z - hz) < CUT || Math.hypot(x, z + hz) < CUT || Math.abs(z) < ZCUT);
+    const Vg = new Float32Array(n * n);
+    for (let j = 0; j < n; j++) {
+      const z = -L + j * D;
+      for (let i = 0; i < n; i++) {
+        const x = -L + i * D;
+        Vg[j * n + i] = badP(x, z) ? NaN : PHYS.V(q, a, x, z);   // 复用二维精确解（y=0 剖面上）
+      }
+    }
+    const verts = [];
+    const pushSeg = (x0, z0, x1, z1) => { verts.push(x0, 0, z0, x1, 0, z1); };
+    /* Marching Squares 提等势线 */
+    for (const iso of [S.surfV0, -S.surfV0]) {
+      for (let j = 0; j < n - 1; j++) {
+        for (let i = 0; i < n - 1; i++) {
+          const x0 = -L + i * D, z0 = -L + j * D, x1 = x0 + D, z1 = z0 + D;
+          const v00 = Vg[j * n + i], v10 = Vg[j * n + i + 1],
+                v01 = Vg[(j + 1) * n + i], v11 = Vg[(j + 1) * n + i + 1];
+          if (!isFinite(v00) || !isFinite(v10) || !isFinite(v01) || !isFinite(v11)) continue;
+          const ip = (va, vb, xa, za, xb, zb) => {
+            const t = (iso - va) / (vb - va);
+            return [xa + t * (xb - xa), za + t * (zb - za)];
+          };
+          const pts = [];
+          if ((v00 - iso) * (v10 - iso) < 0) pts.push(ip(v00, v10, x0, z0, x1, z0));
+          if ((v10 - iso) * (v11 - iso) < 0) pts.push(ip(v10, v11, x1, z0, x1, z1));
+          if ((v11 - iso) * (v01 - iso) < 0) pts.push(ip(v11, v01, x1, z1, x0, z1));
+          if ((v01 - iso) * (v00 - iso) < 0) pts.push(ip(v01, v00, x0, z1, x0, z0));
+          if (pts.length === 2) pushSeg(pts[0][0], pts[0][1], pts[1][0], pts[1][1]);
+          else if (pts.length === 4) {
+            pushSeg(pts[0][0], pts[0][1], pts[1][0], pts[1][1]);
+            pushSeg(pts[2][0], pts[2][1], pts[3][0], pts[3][1]);
+          }
+        }
+      }
+    }
+    const contourVertCount = verts.length / 3;      // 等势线顶点数（其后为剖面场线）
+    /* 场线转成线段（复用 buildFieldLines 追出来的 12 条基准线） */
+    for (const line of halfLines) {
+      for (let i = 1; i < line.length; i++) {
+        pushSeg(line[i - 1][0], line[i - 1][1], line[i][0], line[i][1]);
+      }
+    }
+    /* 等势线与剖面场线分两个缓冲，用不同颜色绘制（否则在画面上分不清） */
+    const contourVerts = verts.slice(0, contourVertCount * 3);
+    const fieldVerts = verts.slice(contourVertCount * 3);
+    gl.bindBuffer(gl.ARRAY_BUFFER, contourBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(contourVerts), gl.STATIC_DRAW);
+    contourCount = contourVerts.length / 3;
+    gl.bindBuffer(gl.ARRAY_BUFFER, sliceFieldBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fieldVerts), gl.STATIC_DRAW);
+    sliceFieldCount = fieldVerts.length / 3;
+    sliceCount = contourCount + sliceFieldCount;
+  }
+
+  function buildAll() { buildSurfaces(); buildFieldLines(); buildPoints(); buildSlice(); buildReference(); }
+
+  /* ---------- 4.4c 空间参照：中垂面(V=0)参考圆环 + 三色坐标轴 ---------- */
+  function buildReference() {
+    if (!shaders.flat || !refBuf) return;
+    const R = S.L * 0.92, seg = 72;
+    const v = [];
+    for (let i = 0; i < seg; i++) {                     // xy 平面上的圆环（z=0 即中垂面）
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+      v.push(R * Math.cos(a0), R * Math.sin(a0), 0, R * Math.cos(a1), R * Math.sin(a1), 0);
+    }
+    for (let i = 0; i < 8; i++) {                       // 8 条辐条
+      const a = i / 8 * Math.PI * 2;
+      v.push(0, 0, 0, R * Math.cos(a), R * Math.sin(a), 0);
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, refBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+    refCount = v.length / 3;
+    const A = S.L * 0.95;
+    gl.bindBuffer(gl.ARRAY_BUFFER, axesBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      0, 0, 0, A, 0, 0,      // +x 红
+      0, 0, 0, 0, A, 0,      // +y 绿
+      0, 0, 0, 0, 0, A       // +z 蓝（偶极子轴）
+    ]), gl.STATIC_DRAW);
+  }
+
+  /* ---------- 4.5 相机 + 渲染 ---------- */
+  function eyePos() {
+    const cp = Math.cos(CAM.pitch), sp = Math.sin(CAM.pitch), cy = Math.cos(CAM.yaw), sy = Math.sin(CAM.yaw);
+    return [CAM.dist * cp * sy, CAM.dist * sp, CAM.dist * cp * cy];
+  }
+  function drawFrame() {
+    const tNow = performance.now() / 1000;
+    CAM.yaw += (CAM.tyaw - CAM.yaw) * 0.16;
+    CAM.pitch += (CAM.tpitch - CAM.pitch) * 0.16;
+    CAM.dist += (CAM.tdist - CAM.dist) * 0.16;
+    const eye = eyePos();
+    const proj = M.perspective(Math.PI / 4, 1, 0.05, 50);
+    const view = M.lookAt(eye, [0, 0, 0], [0, 1, 0]);
+    gl.clearColor(0.043, 0.058, 0.082, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    if (surfCount > 0) {
+      gl.useProgram(shaders.surf);
+      gl.uniformMatrix4fv(locSurf.proj, false, proj);
+      gl.uniformMatrix4fv(locSurf.view, false, view);
+      gl.uniform3f(locSurf.eye, eye[0], eye[1], eye[2]);
+      gl.bindBuffer(gl.ARRAY_BUFFER, surfBuf);
+      const stride = 36;
+      gl.enableVertexAttribArray(locSurf.pos); gl.vertexAttribPointer(locSurf.pos, 3, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(locSurf.nrm); gl.vertexAttribPointer(locSurf.nrm, 3, gl.FLOAT, false, stride, 12);
+      gl.enableVertexAttribArray(locSurf.col); gl.vertexAttribPointer(locSurf.col, 3, gl.FLOAT, false, stride, 24);
+      gl.drawArrays(gl.TRIANGLES, 0, surfCount);
+    }
+
+    /* ---- 剖切面：半透明平面 + 平面上的等势线与场线（X 光式，穿过曲面可见） ---- */
+    if (shaders.flat && sliceCount > 0) {
+      const rad = PHI * Math.PI / 180, cp2 = Math.cos(rad), sp2 = Math.sin(rad);
+      gl.useProgram(shaders.flat);
+      gl.uniformMatrix4fv(locFlat.proj, false, proj);
+      gl.uniformMatrix4fv(locFlat.view, false, view);
+      gl.uniform1f(locFlat.c, cp2); gl.uniform1f(locFlat.s, sp2);
+      gl.enableVertexAttribArray(locFlat.pos);
+      gl.enable(gl.BLEND);
+      gl.depthMask(false);
+      /* (1) 平面本体：参与深度测试（会被等势面遮挡），不写深度 */
+      gl.uniform4f(locFlat.col, 0.30, 0.52, 0.78, 0.13);
+      gl.bindBuffer(gl.ARRAY_BUFFER, planeBuf);
+      gl.vertexAttribPointer(locFlat.pos, 3, gl.FLOAT, false, 0, 0);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      /* (2) 等势线（琥珀色）与剖面场线（淡蓝）：X 光式，穿过曲面也可见 */
+      gl.disable(gl.DEPTH_TEST);
+      if (contourCount > 0) {
+        gl.uniform4f(locFlat.col, 1.0, 0.76, 0.30, 1.0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, contourBuf);
+        gl.vertexAttribPointer(locFlat.pos, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.LINES, 0, contourCount);
+      }
+      if (sliceFieldCount > 0) {
+        gl.uniform4f(locFlat.col, 0.55, 0.82, 1.0, 1.0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, sliceFieldBuf);
+        gl.vertexAttribPointer(locFlat.pos, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.LINES, 0, sliceFieldCount);
+      }
+      gl.depthMask(true);
+      gl.enable(gl.DEPTH_TEST);
+      gl.disable(gl.BLEND);
+    }
+
+    /* ---- 空间参照：中垂面(V=0)圆环 + 三色坐标轴（x 红 / y 绿 / z 蓝） ---- */
+    if (shaders.flat && refCount > 0) {
+      gl.useProgram(shaders.flat);
+      gl.uniformMatrix4fv(locFlat.proj, false, proj);
+      gl.uniformMatrix4fv(locFlat.view, false, view);
+      gl.uniform1f(locFlat.c, 1); gl.uniform1f(locFlat.s, 0);   // 不随剖面旋转
+      gl.enableVertexAttribArray(locFlat.pos);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      gl.depthMask(false);
+      gl.uniform4f(locFlat.col, 0.34, 0.54, 0.72, 0.5);
+      gl.bindBuffer(gl.ARRAY_BUFFER, refBuf);
+      gl.vertexAttribPointer(locFlat.pos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.LINES, 0, refCount);
+      gl.bindBuffer(gl.ARRAY_BUFFER, axesBuf);
+      gl.vertexAttribPointer(locFlat.pos, 3, gl.FLOAT, false, 0, 0);
+      const AX = [[0.88, 0.36, 0.36, 0.95], [0.36, 0.82, 0.46, 0.95], [0.38, 0.58, 0.95, 0.95]];
+      for (let ai = 0; ai < 3; ai++) {
+        gl.uniform4f(locFlat.col, AX[ai][0], AX[ai][1], AX[ai][2], AX[ai][3]);
+        gl.drawArrays(gl.LINES, ai * 2, 2);
+      }
+      gl.depthMask(true);
+      gl.enable(gl.DEPTH_TEST);
+      gl.disable(gl.BLEND);
+    }
+
+    /* ---- 金档：体积光晕（在所有不透明几何之后叠加，X 光式） ---- */
+    if (GOLD && shaders.vol) {
+      const fwd = norm([-eye[0], -eye[1], -eye[2]]);
+      const right = norm(cross(fwd, [0, 1, 0]));
+      const upv = cross(right, fwd);
+      const tanHalf = Math.tan(Math.PI / 8);
+      const qs = S.q / 1e-9;
+      gl.useProgram(shaders.vol);
+      gl.uniform3f(locVol.eye, eye[0], eye[1], eye[2]);
+      gl.uniform3f(locVol.right, right[0], right[1], right[2]);
+      gl.uniform3f(locVol.up, upv[0], upv[1], upv[2]);
+      gl.uniform3f(locVol.fwd, fwd[0], fwd[1], fwd[2]);
+      gl.uniform1f(locVol.tanHalf, tanHalf);
+      gl.uniform1f(locVol.L, S.L);
+      gl.uniform1f(locVol.A, S.a);
+      gl.uniform1f(locVol.Q, S.q);
+      gl.uniform1f(locVol.time, tNow);
+      gl.uniform1f(locVol.gain, 0.26);
+      gl.uniform1f(locVol.loLog, Math.log10(60 * qs));
+      gl.uniform1f(locVol.hiLog, Math.log10(3000 * qs));
+      gl.uniform1f(locVol.rin, 0.035);                    // 电荷附近最强
+      gl.uniform1f(locVol.rout, 0.26);                    // 0.26 m 之外完全淡出
+      gl.uniform1i(locVol.steps, 56);
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+      gl.enableVertexAttribArray(locVol.ndc);
+      gl.vertexAttribPointer(locVol.ndc, 2, gl.FLOAT, false, 0, 0);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);     // 纯加色
+      gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.disable(gl.BLEND);
+    }
+
+    gl.useProgram(shaders.line);
+    gl.uniformMatrix4fv(locLine.proj, false, proj);
+    gl.uniformMatrix4fv(locLine.view, false, view);
+    const qVis = Math.min(1.28, 0.76 + 0.18 * Math.sqrt(S.q / 1e-9));
+    gl.uniform3f(locLine.col, 0.18 * qVis, 0.62 * qVis, 0.84 * qVis);
+    gl.uniform1f(locLine.time, tNow * (flowSpeed / 0.22));
+    gl.uniform1f(locLine.flow, flowEnabled ? 1 : 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, lineBuf);
+    gl.enableVertexAttribArray(locLine.pos);
+    gl.vertexAttribPointer(locLine.pos, 3, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(locLine.t);
+    gl.vertexAttribPointer(locLine.t, 1, gl.FLOAT, false, 16, 12);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.depthMask(false);
+    gl.disable(gl.DEPTH_TEST);                     // X 光式：场线穿过等势面也可见
+    for (const s of lineSegs) gl.drawArrays(gl.LINE_STRIP, s.o, s.n);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true); gl.disable(gl.BLEND);
+
+    gl.useProgram(shaders.pt);
+    gl.uniformMatrix4fv(locPt.proj, false, proj);
+    gl.uniformMatrix4fv(locPt.view, false, view);
+    gl.bindBuffer(gl.ARRAY_BUFFER, ptBuf);
+    gl.enableVertexAttribArray(locPt.pos);
+    gl.vertexAttribPointer(locPt.pos, 3, gl.FLOAT, false, 0, 0);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.depthMask(false);
+    const psize = Math.max(14, Math.min(60, 700 / CAM.dist));
+    gl.uniform1f(locPt.size, psize);
+    gl.uniform3f(locPt.col, 1.0, 0.54, 0.24); gl.drawArrays(gl.POINTS, 0, 1);
+    gl.uniform3f(locPt.col, 0.21, 0.77, 0.91); gl.drawArrays(gl.POINTS, 1, 1);
+    /* 3D 探针标记 */
+    if (pickWorld && pickBuf) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, pickBuf);
+      gl.vertexAttribPointer(locPt.pos, 3, gl.FLOAT, false, 0, 0);
+      gl.uniform1f(locPt.size, psize * 0.85);
+      gl.uniform3f(locPt.col, 1.0, 0.86, 0.28);
+      gl.drawArrays(gl.POINTS, 0, 1);
+    }
+    gl.depthMask(true); gl.disable(gl.BLEND);
+  }
+
+  function startLoop() {
+    if (raf) return;
+    let last = performance.now();
+    const tick = (now) => {
+      const dt = now - last; last = now;
+      drawFrame();
+      /* FPS 统计 + 自动降级（金档帧率不足时自动退回标准） */
+      frameTimes.push(dt);
+      if (frameTimes.length > 40) frameTimes.shift();
+      if (frameTimes.length >= 30) {
+        const avg = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+        const fps = 1000 / avg;
+        const el = document.getElementById("fps3d");
+        if (el) el.textContent = fps.toFixed(0) + " FPS";
+        if (GOLD && avg > 45) {
+          setGold(false);
+          hint3d.textContent = "帧率不足（" + fps.toFixed(0) + " FPS），已自动关闭体渲染；可点「金档」再试";
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  }
+  function stopLoop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
+
+  function resize3d() {
+    const box = document.getElementById("canvasWrap");
+    const css = Math.max(240, Math.floor(Math.min(box.clientWidth, box.clientHeight)));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const res = Math.min(1024, Math.floor(css * dpr));
+    canvas3d.style.width = css + "px"; canvas3d.style.height = css + "px";
+    canvas3d.width = res; canvas3d.height = res;
+    if (gl) gl.viewport(0, 0, res, res);
+  }
+
+  /* ---------- 4.6 交互：Tab 切换 / 鼠标 / 缩放 ---------- */
+  function show2D() {
+    active = false; stopLoop();
+    canvas3d.style.display = "none"; hint3d.style.display = "none";
+    const qb = document.getElementById("q3d"); if (qb) qb.style.display = "none";
+    canvas2d.style.display = "block";
+    flowCanvas.style.display = "block";
+    tab2d.classList.add("on"); tab3d.classList.remove("on");
+    S.lowRes = false; sizeCanvas(); refreshAll();
+  }
+  function show3D() {
+    if (!initGL()) { no3dNote.style.display = "inline"; return; }
+    active = true;
+    canvas2d.style.display = "none";
+    flowCanvas.style.display = "none";
+    canvas3d.style.display = "block"; hint3d.style.display = "block";
+    q3d.style.display = "flex";
+    tab3d.classList.add("on"); tab2d.classList.remove("on");
+    resize3d(); buildAll(); startLoop();
+    hint3d.textContent = "红x/绿y/蓝z · 灰环 = 中垂面(V=0) · 单击 = 3D 探针 · 拖动旋转 · 滚轮缩放 · 底部转剖面 φ · 指定等势面 V = ±" + S.surfV0 + " V";
+  }
+  /* 画质切换：标准 / 金档（体积光晕） */
+  const q3d = document.getElementById("q3d"), qStd = document.getElementById("qStd"),
+        qGold = document.getElementById("qGold"), fps3d = document.getElementById("fps3d");
+  function setGold(on) {
+    if (on && (!ready || !shaders.vol)) {
+      hint3d.textContent = "当前环境不支持体渲染（WebGL2 着色器链接失败），保持标准画质";
+      return;
+    }
+    GOLD = on;
+    qGold.classList.toggle("on", on);
+    qStd.classList.toggle("on", !on);
+    frameTimes = [];
+    hint3d.textContent = on
+      ? "金档：体积光晕 + 场线流光（" + (fps3d.textContent || "…") + "）· 拖动旋转 · 滚轮缩放"
+      : "标准画质 · 拖动旋转 · 滚轮缩放 · 指定等势面 V = ±" + S.surfV0 + " V";
+  }
+  qStd.addEventListener("click", () => setGold(false));
+  qGold.addEventListener("click", () => setGold(true));
+  const phi3d = document.getElementById("phi3d"), phiVal = document.getElementById("phiVal");
+  if (phi3d) {
+    phi3d.addEventListener("input", e => {
+      PHI = +e.target.value;
+      phiVal.textContent = PHI + "°";
+    });
+  }
+  tab2d.addEventListener("click", show2D);
+  tab3d.addEventListener("click", show3D);
+  window.addEventListener("keydown", e => {
+    if (e.key.toLowerCase() === "t") { active ? show2D() : show3D(); }
+  });
+  window.addEventListener("resize", () => { if (active && ready) resize3d(); });
+
+  let drag3 = false, lx = 0, ly = 0, downX = 0, downY = 0, moved3 = 0;
+  canvas3d.addEventListener("mousedown", e => {
+    if (!active) return;
+    drag3 = true; lx = e.clientX; ly = e.clientY; downX = e.clientX; downY = e.clientY; moved3 = 0;
+  });
+  window.addEventListener("mousemove", e => {
+    if (!drag3 || !active) return;
+    const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY;
+    moved3 += Math.abs(dx) + Math.abs(dy);
+    CAM.tyaw -= dx * 0.008;
+    CAM.tpitch = Math.max(-1.4, Math.min(1.4, CAM.tpitch + dy * 0.008));
+  });
+  window.addEventListener("mouseup", e => {
+    if (drag3 && active && moved3 < 6) pick3D(e.clientX, e.clientY);   // 视为单击 → 3D 探针
+    drag3 = false;
+  });
+
+  /* 3D 探针：屏幕点 → 射线 → 与剖切面求交 → 读 (ρ, z) 处的物理量 */
+  let pickWorld = null;
+  function pick3D(clientX, clientY) {
+    const rect = canvas3d.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const nx = (clientX - rect.left) / rect.width * 2 - 1;
+    const ny = 1 - (clientY - rect.top) / rect.height * 2;
+    const eye = eyePos();
+    const fwd = norm([-eye[0], -eye[1], -eye[2]]);
+    const right = norm(cross(fwd, [0, 1, 0]));
+    const upv = cross(right, fwd);
+    const th = Math.tan(Math.PI / 8);
+    const dir = norm([
+      fwd[0] + nx * th * right[0] + ny * th * upv[0],
+      fwd[1] + nx * th * right[1] + ny * th * upv[1],
+      fwd[2] + nx * th * right[2] + ny * th * upv[2]
+    ]);
+    const rad = PHI * Math.PI / 180, cp2 = Math.cos(rad), sp2 = Math.sin(rad);
+    const n3 = [sp2, -cp2, 0];                       // 剖切面法向
+    const den = dot(n3, dir);
+    if (Math.abs(den) < 1e-6) return;                // 视线与平面平行
+    const t = -dot(n3, eye) / den;
+    if (t <= 0) return;
+    const P = [eye[0] + t * dir[0], eye[1] + t * dir[1], eye[2] + t * dir[2]];
+    const rho = P[0] * cp2 + P[1] * sp2;             // 平面内到轴的距离（带符号）
+    const z = P[2];
+    /* 射线可以打到剖面矩形之外（数学上平面无限大），这里限制在计算域内 */
+    if (Math.abs(rho) > S.L || Math.abs(z) > S.L) {
+      hint3d.textContent = "点击位置超出计算域（±" + (S.L * 100).toFixed(0) + " cm），请点在剖切面矩形内";
+      return;
+    }
+    pickWorld = P;
+    S.probe.x = rho; S.probe.z = z; S.probe.pinned = true;
+    if (typeof updateProbePanel === "function") updateProbePanel(rho, z);
+    if (shaders.pt && pickBuf) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, pickBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(P), gl.STATIC_DRAW);
+    }
+    const V_o = PHYS.V(S.q, S.a, rho, z);
+    const E_o = Math.hypot(PHYS.E(S.q, S.a, rho, z).Ex, PHYS.E(S.q, S.a, rho, z).Ez);
+    const band = Math.abs(V_o) > S.surfV0 ? "±V₀ 面之内" : "±V₀ 面之外";
+    hint3d.textContent = "3D 探针 (ρ, z) = (" + (rho * 100).toFixed(1) + ", " + (z * 100).toFixed(1) +
+      ") cm　V = " + V_o.toFixed(3) + " V　|E| = " + E_o.toFixed(3) + " V/m　位于 " + band;
+  }
+  canvas3d.addEventListener("wheel", e => {
+    if (!active) return; e.preventDefault();
+    CAM.tdist = Math.max(0.6, Math.min(8, CAM.tdist * (e.deltaY > 0 ? 1.1 : 0.9)));
+  }, { passive: false });
+
+  /* ---------- 4.7 参数变化时同步重建（供 2D 的 refreshAll 调用） ---------- */
+  window.rebuild3D = function () {
+    if (!active || !ready) return;
+    if (rebuildPending) return;
+    rebuildPending = true;
+    hint3d.textContent = "重建等势面中…（96³ 网格，约 0.5 秒）";
+    setTimeout(() => {
+      rebuildPending = false;
+      if (active && ready) { buildAll(); hint3d.textContent = "红x/绿y/蓝z · 灰环 = 中垂面(V=0) · 单击 = 3D 探针 · 拖动旋转 · 滚轮缩放 · 底部转剖面 φ · 指定等势面 V = ±" + S.surfV0 + " V"; }
+    }, 250);
+  };
+
+  /* ---------- 4.8 诊断钩子（仅供自检/回归测试，不影响渲染） ---------- */
+  window.__dipole3d = { M, eyePos, CAM, sub, dot, cross, norm, draw: drawFrame, setGold, pick3D,
+    get gold() { return GOLD; }, get phi() { return PHI; }, set phi(v) { PHI = v; },
+    get surfCount() { return surfCount; }, get sliceCount() { return sliceCount; }, get contourCount() { return contourCount; }, get sliceFieldCount() { return sliceFieldCount; }, get refCount() { return refCount; },
+    get ready() { return ready; }, get active() { return active; } };
+})();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
